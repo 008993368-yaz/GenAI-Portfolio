@@ -1,260 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yazhini Elanchezhian | Frontend Developer</title>
-
-  <link rel="stylesheet" href="src/css/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yazhini Elanchezhian | Application Engineer</title>
+    <link rel="stylesheet" href="src/css/style.css">
 </head>
 <body>
-  <!-- NAV -->
-  <header class="header" id="top">
-    <nav class="nav container">
-      <a class="logo" href="#top">YE</a>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container">
+            <!-- <div class="profile-photo">
+                <div class="photo-placeholder">
+                    <span class="initials">YE</span>
+                </div>
+            </div> -->
+            <h1 class="name">YAZHINI ELANCHEZHIAN</h1>
+            <div class="contact-info">
+                <span>📍 Redlands, CA</span>
+                <span>📞 +1 909-871-6890</span>
+                <span>✉️ yazhini.elanchezhian3368@coyote.csusb.edu</span>
+            </div>
+        </div>
+    </header>
 
-      <ul class="nav-links">
-        <li><a href="#about">About</a></li>
-        <li><a href="#skills">Skills</a></li>
-        <li><a href="#work">Experience</a></li>
-        <li><a href="#projects">Projects</a></li>
-        <li><a href="#edu">Education</a></li>
-        <li><a href="#contact" class="nav-cta">Contact</a></li>
-      </ul>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <a href="index.html" class="nav-link active">Summary & Skills</a>
+            <a href="experience.html" class="nav-link">Experience & Education</a>
+            <a href="projects.html" class="nav-link">Projects</a>
+        </div>
     </nav>
-  </header>
 
-  <main>
-    <!-- HERO -->
-    <section class="hero container" id="home">
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Summary Section -->
+            <section id="summary" class="section">
+                <h2 class="section-title">Summary</h2>
+                <p class="summary-text">
+                    Application Engineer with 3 years of experience building responsive front-end applications using Angular, HTML5, SASS, and JavaScript. 
+                    Skilled in integrating AWS services, automating workflows with Power Apps, Power BI, and Power Automate, and implementing .NET MVC solutions. 
+                    Strong background in unit testing (Jest, Jasmine, XUnit) and Agile methodologies, ensuring reliable, user-centric applications. 
+                    Currently pursuing an MS in Computer Science to deepen expertise in machine learning and data-driven technologies.
+                </p>
+            </section>
 
-      <div class="hero-left reveal">
-        <p class="kicker">Frontend Developer • UI Engineering • Animations</p>
-        <h1>Hi, I’m <span class="accent">Yazhini</span>.</h1>
-        <p class="hero-subtitle">
-          Application Engineer with 3 years of experience building responsive front-end applications using
-          Angular, HTML5, SASS, and JavaScript.
-        </p>
-
-        <div class="hero-actions">
-          <a class="btn-primary" href="#projects">View Projects</a>
-          <a class="btn-secondary" href="#contact">Contact Me</a>
+            <!-- Skills Section -->
+            <section id="skills" class="section">
+                <h2 class="section-title">Skills</h2>
+                <div class="skills-grid">
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Programming Languages</h3>
+                        <p>Python, JavaScript, TypeScript, HTML5, SASS, C#</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Frameworks & Architectures</h3>
+                        <p>Angular, .NET MVC, Single Page Applications (SPA), Docker</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Testing</h3>
+                        <p>Jest, Jasmine, XUnit</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Cloud & Dev Tools</h3>
+                        <p>AWS Lambda, AWS CloudWatch, Postman, Git, Adobe Experience Manager</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Databases</h3>
+                        <p>MySQL, Cosmos DB</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">BI & Automation</h3>
+                        <p>Power BI, Power Apps, Power Automate</p>
+                    </div>
+                    <div class="skill-category">
+                        <h3 class="skill-category-title">Methodologies</h3>
+                        <p>Agile, API Integration</p>
+                    </div>
+                </div>
+            </section>
         </div>
+    </main>
 
-        <div class="hero-meta">
-          <span>Redlands, CA</span>
-          <span>•</span>
-          <a href="mailto:yazhini.elanchezhian3368@coyote.csusb.edu">yazhini.elanchezhian3368@coyote.csusb.edu</a>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Yazhini Elanchezhian. All rights reserved.</p>
         </div>
-      </div>
+    </footer>
 
-      <div class="hero-right reveal">
-        <div class="hero-card">
-          <p class="hero-card-title">Currently</p>
-          <p class="hero-card-text">MS in Computer Science (CSUSB)</p>
-
-          <div class="hero-stats">
-            <div class="stat">
-              <p class="stat-num">3+</p>
-              <p class="stat-label">Years Experience</p>
-            </div>
-            <div class="stat">
-              <p class="stat-num">SPA</p>
-              <p class="stat-label">Angular / JS</p>
-            </div>
-            <div class="stat">
-              <p class="stat-num">Tests</p>
-              <p class="stat-label">Jest / Jasmine</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ABOUT -->
-    <section class="section container" id="about">
-      <div class="section-head reveal">
-        <h2>About</h2>
-            <p>
-            I’m an Application Engineer focused on building polished, responsive SPAs and interactive UI.
-            I also enjoy building AI-driven tools—like ScholarBot—where I combine LLM workflows, retrieval,
-            and automation pipelines to solve real problems.
-            </p>
-      </div>
-    </section>
-
-    <!-- SKILLS -->
-    <section class="section container" id="skills">
-      <div class="section-head reveal">
-        <h2>Skills</h2>
-        <p>Frontend, testing, cloud, and tools I use to ship reliable applications.</p>
-      </div>
-
-      <div class="grid-2">
-        <article class="card reveal">
-        <h3>Frontend</h3>
-        <ul class="list">
-            <li>JavaScript, TypeScript</li>
-            <li>HTML5, SASS</li>
-            <li>Angular, SPA Architecture</li>
-            <li>Responsive UI + Micro-interactions</li>
-        </ul>
-        </article>
-
-        <article class="card reveal">
-        <h3>AI / LLM</h3>
-        <ul class="list">
-            <li>LangGraph, LangChain</li>
-            <li>Streamlit (AI apps)</li>
-            <li>Multi-turn state + tool calling</li>
-            <li>RAG-style retrieval workflows</li>
-        </ul>
-        </article>
-
-        <article class="card reveal">
-        <h3>Cloud & Automation</h3>
-        <ul class="list">
-            <li>AWS Lambda, CloudWatch</li>
-            <li>Adobe Experience Manager (AEM)</li>
-            <li>Azure Functions, Cosmos DB</li>
-            <li>Power BI, Power Apps, Power Automate</li>
-        </ul>
-        </article>
-
-        <article class="card reveal">
-        <h3>Testing & Dev Tools</h3>
-        <ul class="list">
-            <li>Jest, Jasmine, XUnit</li>
-            <li>Git, Postman</li>
-            <li>Docker (basics)</li>
-            <li>Agile delivery</li>
-        </ul>
-        </article>
-
-      </div>
-    </section>
-
-    <!-- EXPERIENCE -->
-    <section class="section container" id="work">
-      <div class="section-head reveal">
-        <h2>Experience</h2>
-        <p>Impact-focused highlights from my industry work.</p>
-      </div>
-
-      <article class="timeline card reveal">
-        <div class="timeline-top">
-          <h3>Advanced Application Engineering Analyst — Accenture</h3>
-          <p class="muted">Aug 2022 – May 2025 • India</p>
-        </div>
-
-        <ul class="list">
-          <li>Integrated AWS Lambda with an SPA, reducing API response time by ~30%.</li>
-          <li>Built responsive front-end UIs with HTML5, SASS, and Vanilla JS (bounce rate ↓ ~15%).</li>
-          <li>Authored unit tests (Jest/Jasmine/XUnit), reaching up to ~90% coverage.</li>
-          <li>Implemented .NET MVC UI features (Adaptive Cards), improving rendering latency by ~15%.</li>
-        </ul>
-      </article>
-    </section>
-
-    <!-- AI-work -->
-    <section class="section container" id="ai">
-        <div class="section-head reveal">
-            <h2>AI & Automation Highlights</h2>
-            <p>Selected work where I combined frontend, cloud, and data workflows.</p>
-        </div>
-
-        <div class="grid-2">
-            <article class="card reveal">
-            <h3>GenAI Chatbot Automation Pipeline</h3>
-            <p class="muted">AEM • Azure Functions • Cosmos DB</p>
-            <ul class="list">
-                <li>Extracted raw content from AEM servers and transformed it via Azure Functions.</li>
-                <li>Stored structured data in Cosmos DB to reduce manual effort by ~90%.</li>
-                <li>Enabled reliable downstream retrieval for chatbot experiences.</li>
-            </ul>
-            </article>
-
-            <article class="card reveal">
-            <h3>Dashboards + Power Platform Integration</h3>
-            <p class="muted">Power BI • Power Apps • Power Automate</p>
-            <ul class="list">
-                <li>Built Power BI dashboards and integrated a custom Power App.</li>
-                <li>Connected workflows with Power Automate for real-time insights.</li>
-                <li>Enabled 50+ stakeholders to access reporting and insights.</li>
-            </ul>
-            </article>
-        </div>
-    </section>
-
-
-    <!-- PROJECTS -->
-    <section class="section container" id="projects">
-      <div class="section-head reveal">
-        <h2>Projects</h2>
-        <p>Selected work — interactive UI, automation, and AI ojects.</p>
-      </div>
-
-      <div class="grid-2">
-        <article class="card reveal">
-          <h3>Nova Headphones Landing Page</h3>
-          <p class="muted">HTML • CSS • JavaScript</p>
-          <p>A premium animated landing page with scroll reveal and micro-interactions.</p>
-          <div class="card-actions">
-            <a class="link" href="#" target="_blank" rel="noreferrer">Live</a>
-            <a class="link" href="#" target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-        </article>
-
-        <article class="card reveal">
-          <h3>ScholarBot</h3>
-          <p class="muted">LangGraph • LangChain • Streamlit</p>
-          <p>Scholar AI assistant chatbot with multi-turn parameter memory and CSUSB library API tool.</p>
-          <div class="card-actions">
-            <a class="link" href="#" target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- EDUCATION -->
-    <section class="section container" id="edu">
-      <div class="section-head reveal">
-        <h2>Education</h2>
-        <p>Academic background and ongoing MS in Computer Science.</p>
-      </div>
-
-      <div class="grid-2">
-        <article class="card reveal">
-          <h3>MS in Computer Science — CSUSB</h3>
-          <p class="muted">Aug 2025 – May 2027 (Expected)</p>
-        </article>
-
-        <article class="card reveal">
-          <h3>B.Tech — SASTRA University</h3>
-          <p class="muted">Jul 2018 – Jul 2022 • CGPA: 7.43/10</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- CONTACT -->
-    <section class="section container" id="contact">
-      <div class="contact card reveal">
-        <h2>Let’s build something great.</h2>
-        <p class="muted">Open to frontend roles and UI engineering opportunities.</p>
-
-        <div class="contact-actions">
-          <a class="btn-primary" href="mailto:yazhini.elanchezhian3368@coyote.csusb.edu">Email Me</a>
-          <a class="btn-secondary" href="#" target="_blank" rel="noreferrer">GitHub</a>
-          <a class="btn-secondary" href="#" target="_blank" rel="noreferrer">LinkedIn</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <p class="muted">© <span id="year"></span> Yazhini Elanchezhian</p>
-  </footer>
-
-  <script src="src/js/main.js"></script>
+    <script src="src/js/main.js"></script>
 </body>
 </html>
