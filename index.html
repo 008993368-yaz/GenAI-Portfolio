@@ -27,17 +27,19 @@
     <!-- Navigation -->
     <nav class="nav">
         <div class="container">
-            <a href="index.html" class="nav-link active">Summary & Skills</a>
-            <a href="experience.html" class="nav-link">Experience & Education</a>
-            <a href="projects.html" class="nav-link">Projects</a>
+            <a href="#home" class="nav-link active">Home</a>
+            <a href="#skills" class="nav-link">Skills</a>
+            <a href="#projects" class="nav-link">Projects</a>
+            <a href="#experience" class="nav-link">Experience</a>
+            <a href="#education" class="nav-link">Education</a>
         </div>
     </nav>
 
     <!-- Main Content -->
     <main class="main">
         <div class="container">
-            <!-- Summary Section -->
-            <section id="summary" class="section">
+            <!-- Home/Summary Section -->
+            <section id="home" class="section">
                 <h2 class="section-title">Summary</h2>
                 <p class="summary-text">
                     Application Engineer with 3 years of experience building responsive front-end applications using Angular, HTML5, SASS, and JavaScript. 
@@ -79,6 +81,115 @@
                         <h3 class="skill-category-title">Methodologies</h3>
                         <p>Agile, API Integration</p>
                     </div>
+                </div>
+            </section>
+
+            <!-- Projects Section -->
+            <section id="projects" class="section">
+                <h2 class="section-title">Academic Projects</h2>
+                
+                <div class="project-card">
+                    <div class="project-image" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+                        <div class="project-image-content">
+                            <div class="project-icon">🌎</div>
+                            <div class="project-visual">
+                                <div class="visual-element circle"></div>
+                                <div class="visual-element bar"></div>
+                                <div class="visual-element chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="project-content">
+                        <h3 class="project-title">GeoAssist</h3>
+                        <span class="project-tech">LangChain, ArcGIS API, MCP</span>
+                        <p class="project-description">
+                            Developed an AI-driven geospatial chatbot using LangGraph and LangChain to interpret natural-language location queries and dynamically orchestrate GIS tool calls for geocoding and proximity search.
+                        </p>
+                        <ul class="project-highlights">
+                            <li>Integrated ArcGIS Location Platform services via Model Context Protocol (MCP) server</li>
+                            <li>Enabled agent-based access to geocoding and nearby place search APIs</li>
+                            <li>Returned structured, location-aware responses with facility metadata</li>
+                        </ul>
+                        <a href="https://github.com/008993368-yaz/landing-page-yz" target="_blank" class="github-btn">
+                            <svg class="github-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+
+                <div class="project-card reverse">
+                    <div class="project-image" style="background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);">
+                        <div class="project-image-content">
+                            <div class="project-icon">📚</div>
+                            <div class="project-visual">
+                                <div class="visual-element book"></div>
+                                <div class="visual-element search"></div>
+                                <div class="visual-element data"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="project-content">
+                        <h3 class="project-title">ScholarBot</h3>
+                        <span class="project-tech">LangGraph, LangChain, Streamlit</span>
+                        <p class="project-description">
+                            Developed a Streamlit based Scholar AI Assistant chatbot using LangGraph and LLM-powered query parsing to extract parameters from user prompts, integrated with CSUSB library API.
+                        </p>
+                        <ul class="project-highlights">
+                            <li>Custom "get_resource" tool for retrieving academic articles, books, journals, and dissertations</li>
+                            <li>Implemented stateful multi-turn interactions using InMemorySaver</li>
+                            <li>Maintained parameter context for intelligent follow-up questions</li>
+                        </ul>
+                        <a href="https://github.com/DrAlzahrani2025Projects/team1f25" target="_blank" class="github-btn">
+                            <svg class="github-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Experience Section -->
+            <section id="experience" class="section">
+                <h2 class="section-title">Work Experience</h2>
+                <div class="experience-item">
+                    <div class="experience-header">
+                        <h3 class="job-title">Advanced Application Engineering Analyst</h3>
+                        <span class="job-duration">Aug 2022 - May 2025</span>
+                    </div>
+                    <p class="company">Accenture, India</p>
+                    <ul class="achievements">
+                        <li>Integrated Amazon Web Services (AWS) Lambda services with a Single Page Application (SPA) by connecting data flows between the backend AEM server and the front-end, reducing API response time by 30% and enabling seamless communication.</li>
+                        <li>Developed front-end applications using HTML5, SASS, and Vanilla JavaScript, ensuring responsive and user-friendly interfaces that reduced bounce rate by 15%.</li>
+                        <li>Engineered an automation workflow for GenAI chatbot by extracting raw data from AEM servers, transforming it with Azure Functions, and storing it in Cosmos DB, reducing manual effort by 90%.</li>
+                        <li>Incorporated a custom Power App with Power BI dashboards, and established seamless connectivity using Power Automate flows, enabling 50+ stakeholders to access real-time insights.</li>
+                        <li>Authored unit tests with Jest, Jasmine, and XUnit for Angular and .NET applications, achieving up to 90% code coverage and reducing post-release defects.</li>
+                        <li>Implemented Adaptive Card technology using the .NET MVC framework, decreasing UI rendering latency by 15% and boosting user engagement.</li>
+                        <li>Collaborated in Agile teams, contributing to sprint planning, reviews, and retrospectives, while proposing process improvements that increased sprint efficiency.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Education Section -->
+            <section id="education" class="section">
+                <h2 class="section-title">Education</h2>
+                <div class="education-item">
+                    <div class="education-header">
+                        <h3 class="degree">Master of Science in Computer Science</h3>
+                        <span class="education-duration">Aug 2025 - May 2027 (Expected)</span>
+                    </div>
+                    <p class="institution">California State University - San Bernardino</p>
+                    <p class="gpa">GPA: 4/4</p>
+                </div>
+                <div class="education-item">
+                    <div class="education-header">
+                        <h3 class="degree">Bachelor of Technology in Information & Communication Technology</h3>
+                        <span class="education-duration">July 2018 - July 2022</span>
+                    </div>
+                    <p class="institution">SASTRA Deemed to be University, India</p>
+                    <p class="gpa">CGPA: 7.43/10</p>
                 </div>
             </section>
         </div>
