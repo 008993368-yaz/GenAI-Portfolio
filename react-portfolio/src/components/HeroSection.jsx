@@ -31,7 +31,8 @@ const HeroSection = ({ personalInfo, onNavClick }) => {
 
         {/* Headline */}
         <h1 className="hero-headline">
-          Hello, I'm Yazhini.
+          Hello, I'm Yazhini. <br></br>
+          I’m a full stack developer and also enjoy developing AI powered applications.
         </h1>
 
         {/* Secondary line */}

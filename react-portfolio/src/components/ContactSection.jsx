@@ -72,7 +72,7 @@ const ContactSection = ({ personalInfo }) => {
         </div>
 
         {/* Contact Form */}
-        <div className="contact-form-box">
+        {/* <div className="contact-form-box">
           <h3 className="contact-subtitle">Send a Message</h3>
           {submitted && (
             <div className="form-success">
@@ -123,7 +123,7 @@ const ContactSection = ({ personalInfo }) => {
               Send Message
             </button>
           </form>
-        </div>
+        </div> */}
       </div>
     </section>
   );
