@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import Header from './components/Header';
+import HeroSection from './components/HeroSection';
 import Navbar from './components/Navbar';
-import SummarySection from './components/SummarySection';
 import SkillsSection from './components/SkillsSection';
 import ProjectsSection from './components/ProjectsSection';
 import ExperienceSection from './components/ExperienceSection';
 import EducationSection from './components/EducationSection';
+import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
 import ChatbotButton from './components/ChatbotButton';
 import { portfolioData } from './data/portfolioData';
@@ -29,19 +29,22 @@ function App() {
 
   return (
     <>
-      <Header personalInfo={portfolioData.personalInfo} />
       <Navbar 
         links={navLinks} 
         activeSection={activeSection} 
         onNavClick={handleNavClick}
       />
+      <HeroSection 
+        personalInfo={portfolioData.personalInfo}
+        onNavClick={handleNavClick}
+      />
       <main className="main">
         <div className="container">
-          <SummarySection summary={portfolioData.summary} />
           <SkillsSection skills={portfolioData.skills} />
-          <ProjectsSection projects={portfolioData.projects} />
           <ExperienceSection experience={portfolioData.experience} />
+          <ProjectsSection projects={portfolioData.projects} />
           <EducationSection education={portfolioData.education} />
+          <ContactSection personalInfo={portfolioData.personalInfo} />
         </div>
       </main>
       <Footer />

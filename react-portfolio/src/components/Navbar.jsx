@@ -5,8 +5,8 @@ const Navbar = ({ links, activeSection, onNavClick }) => {
   };
 
   return (
-    <nav className="nav">
-      <div className="container">
+    <nav className="floating-nav">
+      <div className="nav-pill">
         {links.map((link) => (
           <a
             key={link.id}
