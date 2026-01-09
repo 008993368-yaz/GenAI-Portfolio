@@ -5,7 +5,7 @@ const SkillsSection = ({ skills }) => {
   const { ref, isVisible } = useIntersectionObserver();
 
   return (
-    <section id="skills" className="section" ref={ref} style={{
+    <section id="skills" className={`section ${isVisible ? 'visible' : 'fade-in'}`} ref={ref} style={{
       opacity: isVisible ? 1 : 0,
       transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
       transition: 'opacity 0.6s ease, transform 0.6s ease'
