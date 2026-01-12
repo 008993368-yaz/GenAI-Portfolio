@@ -1,0 +1,77 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+ENV/
+env/
+.venv
+
+# Build output
+dist/
+build/
+.vite
+dist-ssr/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.project
+.settings/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+htmlcov/
+.tox/
+.coverage
+.pytest_cache/
+
+# Docker files (optional - exclude if you don't want them in the image)
+.dockerignore
+docker-compose*.yml
+
+# OS files
+Thumbs.db
+.DS_Store
+.Spotlight-V100
+.Trashes
+
+# Misc
+*.md
+!README.md
+.eslintcache
+.prettierrc
+.editorconfig
+LICENSE
