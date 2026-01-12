@@ -50,17 +50,17 @@ export const portfolioData = {
   projects: [
     {
       id: 1,
-      title: "GeoAssist",
-      tech: "LangChain, ArcGIS API, MCP",
-      description: "Developed an AI-driven geospatial chatbot using LangGraph and LangChain to interpret natural-language location queries and dynamically orchestrate GIS tool calls for geocoding and proximity search.",
+      title: "AI-Powered Portfolio",
+      tech: "React, FastAPI, LangChain, Pinecone",
+      description: "Developed a full-stack interactive portfolio application with a React frontend and an AI-powered chatbot that enables natural conversations about professional background, skills, and experience using Retrieval-Augmented Generation.",
       highlights: [
-        "Integrated ArcGIS Location Platform services via Model Context Protocol (MCP) server",
-        "Enabled agent-based access to geocoding and nearby place search APIs",
-        "Returned structured, location-aware responses with facility metadata"
+        "Built a production-ready RAG backend using FastAPI, LangChain, and Pinecone for semantic resume search",
+        "Integrated an AI chatbot widget with conversation memory and real-time context retrieval",
+        "Implemented guardrails for off-topic queries and embedded PDF resume ingestion"
       ],
       githubUrl: "https://github.com/008993368-yaz/landing-page-yz",
       gradient: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-      icon: "🌎",
+      icon: "🤖",
       visual: ["circle", "bar", "chart"],
       reverse: false
     },
