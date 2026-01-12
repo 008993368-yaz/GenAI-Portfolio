@@ -1,0 +1,21 @@
+# FastAPI backend
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-dotenv==1.0.0
+
+# RAG dependencies
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-openai==0.2.14
+langchain-text-splitters==0.3.0
+pinecone-client==5.0.1
+pinecone-plugin-inference==1.0.3
+
+# PDF processing
+pypdf==4.3.1
+
+# OpenAI
+openai>=1.58.1,<2.0.0
+
+# Additional utilities
+tiktoken==0.8.0
