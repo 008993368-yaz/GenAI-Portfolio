@@ -468,6 +468,136 @@ body {
     padding-left: 0.5rem;
 }
 
+/* Accordion Styles - Minimal & Premium */
+.capabilities-container {
+    margin-top: 1.5rem;
+}
+
+.accordion-item {
+    margin-bottom: 0;
+    border: none;
+    border-bottom: 1px solid rgba(224, 224, 224, 0.3);
+    background-color: transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.accordion-item:last-child {
+    border-bottom: none;
+}
+
+/* Subtle left accent line when expanded */
+.accordion-item.is-open::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--secondary-color);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.accordion-header {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    background-color: transparent;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    text-align: left;
+}
+
+.accordion-header:hover {
+    background-color: rgba(248, 249, 250, 0.5);
+}
+
+.accordion-header.active {
+    background-color: rgba(52, 152, 219, 0.03);
+}
+
+.accordion-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    letter-spacing: -0.01em;
+}
+
+.accordion-icon {
+    font-size: 0.7rem;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    color: var(--secondary-color);
+    opacity: 0.5;
+    line-height: 1;
+}
+
+.accordion-header:hover .accordion-icon {
+    opacity: 0.8;
+}
+
+.accordion-icon.open {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+/* Wrapper for height animation */
+.accordion-content-wrapper {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Inner content for opacity and transform animation */
+.accordion-content {
+    padding: 0.5rem 1.75rem 1.25rem 1.75rem;
+    background-color: rgba(52, 152, 219, 0.02);
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease 0.05s, 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s,
+                background-color 0.25s ease;
+}
+
+.accordion-content.open {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease 0.1s, 
+                transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.05s,
+                background-color 0.25s ease;
+}
+
+.accordion-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.accordion-list li {
+    margin-bottom: 0.65rem;
+    line-height: 1.65;
+    position: relative;
+    padding-left: 1.25rem;
+    color: var(--text-color);
+    font-weight: 400;
+}
+
+.accordion-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--secondary-color);
+    font-weight: bold;
+    opacity: 0.6;
+}
+
+.accordion-list li:last-child {
+    margin-bottom: 0;
+}
+
 /* Projects */
 .project-card {
     display: grid;
