@@ -197,11 +197,11 @@ def main():
         print("✅ Environment variables loaded")
         
         # Find resume PDF
-        pdf_path = Path(__file__).parent.parent / "data" / "resume.pdf"
+        pdf_path = Path(__file__).parent.parent / "data" / "Resume_essay.pdf"
         if not pdf_path.exists():
             raise FileNotFoundError(
                 f"Resume PDF not found at: {pdf_path}\n"
-                f"Please place your resume.pdf in the data/ directory"
+                f"Please place your Resume_essay.pdf in the data/ directory"
             )
         
         # Load and chunk PDF
