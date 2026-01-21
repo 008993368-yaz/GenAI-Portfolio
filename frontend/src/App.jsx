@@ -5,7 +5,6 @@ import SkillsSection from './components/SkillsSection';
 import ProjectsSection from './components/ProjectsSection';
 import ExperienceSection from './components/ExperienceSection';
 import EducationSection from './components/EducationSection';
-import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
 import ChatbotButton from './components/ChatbotButton';
 import { portfolioData } from './data/portfolioData';
@@ -44,7 +43,6 @@ function App() {
           <ExperienceSection experience={portfolioData.experience} />
           <ProjectsSection projects={portfolioData.projects} />
           <EducationSection education={portfolioData.education} />
-          <ContactSection personalInfo={portfolioData.personalInfo} />
         </div>
       </main>
       <Footer />

@@ -50,17 +50,17 @@ export const portfolioData = {
   projects: [
     {
       id: 1,
-      title: "GeoAssist",
-      tech: "LangChain, ArcGIS API, MCP",
-      description: "Developed an AI-driven geospatial chatbot using LangGraph and LangChain to interpret natural-language location queries and dynamically orchestrate GIS tool calls for geocoding and proximity search.",
+      title: "AI-Powered Portfolio",
+      tech: "React, FastAPI, LangChain, Pinecone",
+      description: "Developed a full-stack interactive portfolio application with a React frontend and an AI-powered chatbot that enables natural conversations about professional background, skills, and experience using Retrieval-Augmented Generation.",
       highlights: [
-        "Integrated ArcGIS Location Platform services via Model Context Protocol (MCP) server",
-        "Enabled agent-based access to geocoding and nearby place search APIs",
-        "Returned structured, location-aware responses with facility metadata"
+        "Built a production-ready RAG backend using FastAPI, LangChain, and Pinecone for semantic resume search",
+        "Integrated an AI chatbot widget with conversation memory and real-time context retrieval",
+        "Implemented guardrails for off-topic queries and embedded PDF resume ingestion"
       ],
       githubUrl: "https://github.com/008993368-yaz/landing-page-yz",
       gradient: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-      icon: "🌎",
+      icon: "🤖",
       visual: ["circle", "bar", "chart"],
       reverse: false
     },
@@ -88,14 +88,35 @@ export const portfolioData = {
       title: "Advanced Application Engineering Analyst",
       company: "Accenture, India",
       duration: "Aug 2022 - May 2025",
-      achievements: [
-        "Integrated Amazon Web Services (AWS) Lambda services with a Single Page Application (SPA) by connecting data flows between the backend AEM server and the front-end, reducing API response time by 30% and enabling seamless communication.",
-        "Developed front-end applications using HTML5, SASS, and Vanilla JavaScript, ensuring responsive and user-friendly interfaces that reduced bounce rate by 15%.",
-        "Engineered an automation workflow for GenAI chatbot by extracting raw data from AEM servers, transforming it with Azure Functions, and storing it in Cosmos DB, reducing manual effort by 90%.",
-        "Incorporated a custom Power App with Power BI dashboards, and established seamless connectivity using Power Automate flows, enabling 50+ stakeholders to access real-time insights.",
-        "Authored unit tests with Jest, Jasmine, and XUnit for Angular and .NET applications, achieving up to 90% code coverage and reducing post-release defects.",
-        "Implemented Adaptive Card technology using the .NET MVC framework, decreasing UI rendering latency by 15% and boosting user engagement.",
-        "Collaborated in Agile teams, contributing to sprint planning, reviews, and retrospectives, while proposing process improvements that increased sprint efficiency."
+      capabilities: [
+        {
+          title: "Frontend Engineering & User Experience",
+          achievements: [
+            "Developed front-end applications using HTML5, SASS, and Vanilla JavaScript, ensuring responsive and user-friendly interfaces that reduced bounce rate by 15%.",
+            "Implemented Adaptive Card technology using the .NET MVC framework, decreasing UI rendering latency by 15% and boosting user engagement."
+          ]
+        },
+        {
+          title: "Backend Integration & Cloud Services",
+          achievements: [
+            "Integrated Amazon Web Services (AWS) Lambda services with a Single Page Application (SPA) by connecting data flows between the backend AEM server and the front-end, reducing API response time by 30% and enabling seamless communication.",
+            "Collaborated in Agile teams, contributing to sprint planning, reviews, and retrospectives, while proposing process improvements that increased sprint efficiency."
+          ]
+        },
+        {
+          title: "AI Automation & Intelligent Systems",
+          achievements: [
+            "Engineered an automation workflow for GenAI chatbot by extracting raw data from AEM servers, transforming it with Azure Functions, and storing it in Cosmos DB, reducing manual effort by 90%.",
+            "Incorporated a custom Power App with Power BI dashboards, and established seamless connectivity using Power Automate flows, enabling 50+ stakeholders to access real-time insights."
+          ]
+        },
+        {
+          title: "Analytics, Testing & Quality Engineering",
+          achievements: [
+            "Authored unit tests with Jest, Jasmine, and XUnit for Angular and .NET applications, achieving up to 90% code coverage and reducing post-release defects.",
+            "Incorporated a custom Power App with Power BI dashboards, and established seamless connectivity using Power Automate flows, enabling 50+ stakeholders to access real-time insights."
+          ]
+        }
       ]
     }
   ],
