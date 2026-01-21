@@ -3,16 +3,6 @@ import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 const HeroSection = ({ personalInfo, onNavClick }) => {
   const { ref, isVisible } = useIntersectionObserver();
 
-//   const handleProjectsClick = (e) => {
-//     e.preventDefault();
-//     onNavClick('projects');
-//   };
-
-//   const handleContactClick = (e) => {
-//     e.preventDefault();
-//     onNavClick('contact');
-//   };
-
   return (
     <section id="home" className="hero-section" ref={ref}>
       <div className="hero-content" style={{
@@ -36,21 +26,19 @@ const HeroSection = ({ personalInfo, onNavClick }) => {
         </h1>
 
         {/* Secondary line */}
-        <p className="hero-tagline">
+        {/* <p className="hero-tagline">
             I build beautiful frontends. <br></br>
             I engineer intelligent AI systems. <br></br>
             And I bring them together to create impactful products.
-        </p>
+        </p> */}
 
         {/* Tech stack highlight */}
         <div className="hero-tech">
-            <span className="tech-highlight">Angular</span>
+            <span className="tech-highlight">Redlands, CA</span>
             <span className="tech-separator">•</span>
-            <span className="tech-highlight">LLMs</span>
+            <span className="tech-highlight">+1 909-871-6890</span>
             <span className="tech-separator">•</span>
-            <span className="tech-highlight">LangGraph</span>
-            <span className="tech-separator">•</span>
-            <span className="tech-highlight">AWS</span>
+            <span className="tech-highlight">yazhini.elanchezhian3368@coyote.csusb.edu</span>
         </div>
 
         {/* CTA Buttons */}
