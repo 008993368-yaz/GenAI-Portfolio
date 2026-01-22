@@ -1,11 +1,71 @@
 """
 RAG Retriever Service
-Handles semantic search over resume using Pinecone inference API
+LangChain-based semantic search over resume using Pinecone
 """
 
 import os
 from typing import List, Dict, Any, Optional
 from pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
+from langchain.embeddings.base import Embeddings
+from langchain.schema import Document
+
+
+class PineconeInferenceEmbeddings(Embeddings):
+    """
+    Custom LangChain embeddings class using Pinecone's inference API
+    Wraps Pinecone's llama-text-embed-v2 model
+    """
+    
+    def __init__(self, pinecone_client: Pinecone, model: str = "llama-text-embed-v2"):
+        """
+        Initialize Pinecone inference embeddings
+        
+        Args:
+            pinecone_client: Initialized Pinecone client
+            model: Embedding model name
+        """
+        self.pc = pinecone_client
+        self.model = model
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """
+        Embed a list of documents
+        
+        Args:
+            texts: List of document texts to embed
+            
+        Returns:
+            List of embedding vectors
+        """
+        if not texts:
+            return []
+        
+        embeddings = self.pc.inference.embed(
+            model=self.model,
+            inputs=texts,
+            parameters={"input_type": "passage"}
+        )
+        
+        return [emb['values'] for emb in embeddings]
+    
+    def embed_query(self, text: str) -> List[float]:
+        """
+        Embed a query string
+        
+        Args:
+            text: Query text to embed
+            
+        Returns:
+            Embedding vector
+        """
+        embeddings = self.pc.inference.embed(
+            model=self.model,
+            inputs=[text],
+            parameters={"input_type": "query"}
+        )
+        
+        return embeddings[0]['values']
 
 
 class RetrieverConfig:
@@ -27,31 +87,32 @@ class RetrieverConfig:
 
 
 class ResumeRetriever:
-    """Retrieves relevant resume chunks using Pinecone inference"""
+    """LangChain-based retriever for resume chunks using Pinecone"""
     
     def __init__(self, config: RetrieverConfig):
         self.config = config
+        
+        # Initialize Pinecone client
         self.pc = Pinecone(api_key=config.api_key)
-        self.index = self.pc.Index(config.index_name)
         
-    def _embed_query(self, query: str) -> List[float]:
-        """
-        Embed query using Pinecone inference API
-        
-        Args:
-            query: User query string
-            
-        Returns:
-            List of embedding values
-        """
-        embeddings = self.pc.inference.embed(
-            model=self.config.embed_model,
-            inputs=[query],
-            parameters={"input_type": "query"}
+        # Create custom embeddings
+        self.embeddings = PineconeInferenceEmbeddings(
+            pinecone_client=self.pc,
+            model=config.embed_model
         )
         
-        # Extract values from first (and only) embedding result
-        return embeddings[0]['values']
+        # Initialize LangChain PineconeVectorStore
+        self.vectorstore = PineconeVectorStore(
+            index_name=config.index_name,
+            embedding=self.embeddings,
+            namespace=config.namespace,
+            pinecone_api_key=config.api_key
+        )
+        
+        # Create retriever
+        self.retriever = self.vectorstore.as_retriever(
+            search_kwargs={"k": 5}
+        )
     
     def retrieve(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
@@ -68,34 +129,46 @@ class ResumeRetriever:
                 - text: chunk text content
                 - metadata: additional metadata (source, filename, etc.)
         """
-        # Embed the query
-        query_vector = self._embed_query(query)
+        # Update search kwargs if top_k is different
+        if top_k != 5:
+            self.retriever.search_kwargs = {"k": top_k}
         
-        # Query Pinecone index
-        results = self.index.query(
-            vector=query_vector,
-            top_k=top_k,
-            include_metadata=True,
-            namespace=self.config.namespace
-        )
+        # Use LangChain's similarity search with scores
+        results = self.vectorstore.similarity_search_with_score(query, k=top_k)
         
-        # Format matches
+        # Format matches to maintain compatibility with existing API
         matches = []
-        for match in results.get('matches', []):
-            # Extract text from metadata
-            text = match.metadata.get('text', '')
-            
-            # Build metadata dict (everything except text)
-            metadata = {k: v for k, v in match.metadata.items() if k != 'text'}
-            
+        for doc, score in results:
             matches.append({
-                'id': match.id,
-                'score': match.score,
-                'text': text,
-                'metadata': metadata
+                'id': doc.metadata.get('id', ''),
+                'score': float(score),
+                'text': doc.page_content,
+                'metadata': {k: v for k, v in doc.metadata.items() if k != 'text'}
             })
         
         return matches
+    
+    def get_retriever(self, k: int = 5):
+        """
+        Get the LangChain retriever instance
+        
+        Args:
+            k: Number of documents to retrieve
+            
+        Returns:
+            LangChain retriever with configured search parameters
+        """
+        self.retriever.search_kwargs = {"k": k}
+        return self.retriever
+    
+    def get_vectorstore(self) -> PineconeVectorStore:
+        """
+        Get the underlying PineconeVectorStore instance
+        
+        Returns:
+            PineconeVectorStore instance
+        """
+        return self.vectorstore
 
 
 # Singleton instance (initialized on first use)

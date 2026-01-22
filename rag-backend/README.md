@@ -1,13 +1,17 @@
 # RAG Backend - Portfolio Chatbot
 
-FastAPI backend with RAG (Retrieval Augmented Generation) for portfolio chatbot using LangChain, Pinecone, and OpenAI.
+FastAPI backend with RAG (Retrieval Augmented Generation) for intelligent portfolio chatbot powered by LangChain, Pinecone, and OpenAI.
 
-## Features
+## ✨ Features
 
-- 📄 PDF resume ingestion
-- 🔍 Semantic search with OpenAI embeddings
-- 🌲 Vector storage in Pinecone
-- ⚡ Idempotent ingestion (deterministic IDs)
+- 📄 **PDF Resume Ingestion** - Automated parsing and processing of resume PDFs
+- 🔍 **Semantic Search** - Context-aware retrieval using OpenAI embeddings (text-embedding-ada-002)
+- 🌲 **Vector Database** - Scalable storage in Pinecone with namespaces
+- ⚡ **Idempotent Ingestion** - Deterministic chunk IDs for safe re-runs
+- 💬 **Conversational Memory** - Maintains chat context across messages
+- 🛡️ **Guardrails** - Keeps conversations focused on portfolio topics
+- 🚀 **RESTful API** - FastAPI endpoints with automatic OpenAPI documentation
+- 🔄 **CORS Enabled** - Ready for frontend integration
 
 ## Setup
 
@@ -46,16 +50,27 @@ docker run --env-file .env -v $(pwd)/data:/app/data rag-backend
 
 ### 3. Configure Environment
 
-```bash
-# Copy example environment file
-cp .env.example .env
+Create a `.env` file in the `rag-backend/` directory:
 
-# Edit .env with your actual keys
-# OPENAI_API_KEY=sk-...
-# PINECONE_API_KEY=pcsk_...
-# PINECONE_INDEX_NAME=your-index-name
-# PINECONE_NAMESPACE=resume-v1  # optional
+```env
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-actual-key-here
+
+# Pinecone Configuration
+PINECONE_API_KEY=pcsk-your-actual-key-here
+PINECONE_INDEX_NAME=portfolio-resume
+PINECONE_NAMESPACE=resume-v1
+
+# Optional: Model Configuration
+# EMBEDDING_MODEL=text-embedding-ada-002
+# CHAT_MODEL=gpt-4
 ```
+
+**Important:**
+- Never commit the `.env` file to version control (it's in `.gitignore`)
+- Get your OpenAI key: https://platform.openai.com/api-keys
+- Get your Pinecone key: https://www.pinecone.io/
+- Create a Pinecone index with 1536 dimensions (for ada-002 embeddings)
 
 ### 4. Add Your Resume
 
@@ -177,12 +192,48 @@ rag-backend/
 - **OpenAI** - Embeddings (text-embedding-ada-002)
 - **PyPDF** - PDF parsing
 
-## Next Steps
+## 📡 API Endpoints
 
-- [ ] Add retrieval endpoints
-- [ ] Implement chat functionality
-- [ ] Add API routes for querying
-- [ ] Deploy to production
+Once running, the backend provides:
+
+- **POST /chat** - Send a message and receive AI-generated response
+  ```json
+  {
+    "message": "What are your technical skills?",
+    "conversation_id": "optional-session-id"
+  }
+  ```
+
+- **POST /search** - Semantic search over resume
+  ```json
+  {
+    "query": "python experience",
+    "top_k": 3
+  }
+  ```
+
+- **GET /health** - Health check endpoint
+
+- **GET /docs** - Interactive API documentation (Swagger UI)
+
+- **GET /redoc** - Alternative API documentation
+
+See `CHAT_API_TESTS.md` and `CURL_TESTS.md` for detailed testing examples.
+
+## 🧪 Testing
+
+```bash
+# Run API tests
+python test_api.py
+
+# Test chat endpoint
+python test_chat.py
+
+# Or use curl (see CURL_TESTS.md)
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Tell me about your experience"}'
+```
 
 ## Troubleshooting
 

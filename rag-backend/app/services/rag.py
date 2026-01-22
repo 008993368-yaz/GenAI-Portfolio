@@ -1,24 +1,32 @@
 """
 RAG Service
-Complete RAG pipeline: retrieval from Pinecone + OpenAI generation
+LangChain-based RAG pipeline: retrieval from Pinecone + OpenAI generation
 """
 
 import os
 from typing import List, Dict, Any, Optional
-from pinecone import Pinecone
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.schema import HumanMessage, AIMessage
+from langchain_core.output_parsers import JsonOutputParser
+from pydantic import BaseModel, Field
+
+from app.services.retriever import ResumeRetriever, RetrieverConfig
+
+
+class SuggestedQuestions(BaseModel):
+    """Schema for suggested questions output"""
+    questions: List[str] = Field(description="List of 2 suggested questions")
 
 
 class RAGConfig:
     """Configuration for RAG pipeline"""
     
     def __init__(self):
-        # Pinecone settings
-        self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
-        self.pinecone_index_name = os.getenv("PINECONE_INDEX_NAME")
-        self.pinecone_namespace = os.getenv("PINECONE_NAMESPACE", "resume-v1")
-        self.embed_model = os.getenv("PINECONE_EMBED_MODEL", "llama-text-embed-v2")
+        # Pinecone/Retriever settings (delegated to RetrieverConfig)
+        self.retriever_config = RetrieverConfig()
         self.rag_top_k = int(os.getenv("RAG_TOP_K", "5"))
         
         # OpenAI settings
@@ -27,34 +35,21 @@ class RAGConfig:
         
     def validate(self) -> tuple[bool, Optional[str]]:
         """Validate required environment variables"""
-        if not self.pinecone_api_key:
-            return False, "PINECONE_API_KEY is required"
-        if not self.pinecone_index_name:
-            return False, "PINECONE_INDEX_NAME is required"
+        # Validate retriever config
+        is_valid, error = self.retriever_config.validate()
+        if not is_valid:
+            return False, error
+        
         if not self.openai_api_key:
             return False, "OPENAI_API_KEY is required"
         return True, None
 
 
 class RAGPipeline:
-    """Complete RAG pipeline with retrieval and generation"""
+    """Complete RAG pipeline with LangChain retrieval and generation"""
     
-    def __init__(self, config: RAGConfig):
-        self.config = config
-        
-        # Initialize Pinecone
-        self.pc = Pinecone(api_key=config.pinecone_api_key)
-        self.index = self.pc.Index(config.pinecone_index_name)
-        
-        # Initialize OpenAI
-        self.llm = ChatOpenAI(
-            model=config.openai_model,
-            openai_api_key=config.openai_api_key,
-            temperature=0.7,
-        )
-        
-        # System prompt defining Yazhini's persona and constraints
-        self.system_prompt = """You are Yazhini Elanchezhian's portfolio assistant, a friendly and professional AI that helps visitors learn about Yazhini's background, skills, and experience.
+    # System prompt defining Yazhini's persona
+    SYSTEM_PROMPT = """You are Yazhini Elanchezhian's portfolio assistant, a friendly and professional AI that helps visitors learn about Yazhini's background, skills, and experience.
 
 **Your Role:**
 - Provide accurate information about Yazhini based ONLY on the resume context provided
@@ -79,78 +74,43 @@ class RAGPipeline:
 
 Remember: Accuracy over completeness. If you're not sure, say so."""
     
-    def _embed_query(self, query: str) -> List[float]:
-        """
-        Embed query using Pinecone inference
+    def __init__(self, config: RAGConfig):
+        self.config = config
         
-        Args:
-            query: User query string
-            
-        Returns:
-            Embedding vector
-        """
-        embeddings = self.pc.inference.embed(
-            model=self.config.embed_model,
-            inputs=[query],
-            parameters={"input_type": "query"}
-        )
-        return embeddings[0]['values']
-    
-    def _retrieve_context(self, query: str, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
-        """
-        Retrieve relevant resume chunks from Pinecone
+        # Initialize retriever
+        self.retriever_instance = ResumeRetriever(config.retriever_config)
+        self.retriever = self.retriever_instance.get_retriever(k=config.rag_top_k)
         
-        Args:
-            query: User query
-            top_k: Number of chunks to retrieve (defaults to config value)
-            
-        Returns:
-            List of matching chunks with text and metadata
-        """
-        if top_k is None:
-            top_k = self.config.rag_top_k
-        
-        # Embed the query
-        query_vector = self._embed_query(query)
-        
-        # Query Pinecone
-        results = self.index.query(
-            vector=query_vector,
-            top_k=top_k,
-            include_metadata=True,
-            namespace=self.config.pinecone_namespace
+        # Initialize OpenAI LLM
+        self.llm = ChatOpenAI(
+            model=config.openai_model,
+            openai_api_key=config.openai_api_key,
+            temperature=0.7,
         )
         
-        # Extract chunks
-        chunks = []
-        for match in results.get('matches', []):
-            chunks.append({
-                'text': match.metadata.get('text', ''),
-                'score': match.score,
-                'source': match.metadata.get('source', 'resume'),
-                'chunk_index': match.metadata.get('chunk_index', 0)
-            })
+        # Create prompt template for RAG
+        self.qa_prompt = ChatPromptTemplate.from_messages([
+            ("system", self.SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="chat_history", optional=True),
+            ("human", """RESUME CONTEXT:
+{context}
+
+USER QUESTION: {input}
+
+Please answer based ONLY on the resume context above. If the context doesn't contain the information, say so clearly.""")
+        ])
         
-        return chunks
-    
-    def _build_context_string(self, chunks: List[Dict[str, Any]]) -> str:
-        """
-        Build context string from retrieved chunks
+        # Create document chain
+        self.document_chain = create_stuff_documents_chain(
+            llm=self.llm,
+            prompt=self.qa_prompt
+        )
         
-        Args:
-            chunks: Retrieved resume chunks
-            
-        Returns:
-            Formatted context string
-        """
-        if not chunks:
-            return "No relevant resume context found."
-        
-        context_parts = []
-        for i, chunk in enumerate(chunks, 1):
-            context_parts.append(f"[Context {i}]\n{chunk['text']}\n")
-        
-        return "\n".join(context_parts)
+        # Create retrieval chain
+        self.retrieval_chain = create_retrieval_chain(
+            retriever=self.retriever,
+            combine_docs_chain=self.document_chain
+        )
     
     def generate_response(
         self,
@@ -164,43 +124,136 @@ Remember: Accuracy over completeness. If you're not sure, say so."""
         Args:
             query: User's question
             conversation_history: Previous messages (list of dicts with 'role' and 'content')
-            top_k: Number of chunks to retrieve
+            top_k: Number of chunks to retrieve (updates retriever if different)
             
         Returns:
             Generated response
         """
-        # Retrieve relevant context
-        chunks = self._retrieve_context(query, top_k)
-        context_string = self._build_context_string(chunks)
+        # Update retriever k if specified
+        if top_k is not None and top_k != self.config.rag_top_k:
+            self.retriever = self.retriever_instance.get_retriever(k=top_k)
+            self.retrieval_chain = create_retrieval_chain(
+                retriever=self.retriever,
+                combine_docs_chain=self.document_chain
+            )
         
-        # Build messages for LLM
-        messages = []
-        
-        # System message with instructions
-        messages.append(SystemMessage(content=self.system_prompt))
-        
-        # Add conversation history if available
+        # Convert conversation history to LangChain message format
+        chat_history = []
         if conversation_history:
             for msg in conversation_history:
                 if msg['role'] == 'user':
-                    messages.append(HumanMessage(content=msg['content']))
+                    chat_history.append(HumanMessage(content=msg['content']))
                 elif msg['role'] == 'assistant':
-                    messages.append(AIMessage(content=msg['content']))
+                    chat_history.append(AIMessage(content=msg['content']))
         
-        # Add current query with context
-        user_message = f"""RESUME CONTEXT:
-{context_string}
+        # Invoke the retrieval chain
+        result = self.retrieval_chain.invoke({
+            "input": query,
+            "chat_history": chat_history if chat_history else []
+        })
+        
+        return result["answer"]
+    
+    def generate_suggested_questions(
+        self,
+        last_user_message: Optional[str] = None,
+        conversation_summary: Optional[str] = None
+    ) -> List[str]:
+        """
+        Generate 2 contextually relevant suggested questions using LangChain
+        
+        Args:
+            last_user_message: Most recent user message for context
+            conversation_summary: Summary of the conversation so far
+            
+        Returns:
+            List of 2 suggested questions
+        """
+        # Default fallback suggestions
+        fallback = [
+            "Can you tell me about your background?",
+            "What kind of experience do you have?"
+        ]
+        
+        try:
+            # Determine query for context retrieval
+            retrieval_query = (
+                last_user_message or 
+                conversation_summary or 
+                "portfolio overview"
+            )
+            
+            # Retrieve context using the retriever
+            docs = self.retriever.invoke(retrieval_query)
+            
+            # Build context string
+            context_parts = []
+            for i, doc in enumerate(docs[:4], 1):
+                context_parts.append(f"[Context {i}]\n{doc.page_content}\n")
+            context_string = "\n".join(context_parts) if context_parts else "No context available."
+            
+            # Create output parser
+            parser = JsonOutputParser(pydantic_object=SuggestedQuestions)
+            
+            # Create prompt template for suggestions
+            suggestion_prompt = ChatPromptTemplate.from_messages([
+                ("human", """Based on the following resume context, generate EXACTLY 2 simple HR screening questions that a recruiter might ask a candidate.
 
-USER QUESTION: {query}
+RESUME CONTEXT:
+{context}
 
-Please answer based ONLY on the resume context above. If the context doesn't contain the information, say so clearly."""
-        
-        messages.append(HumanMessage(content=user_message))
-        
-        # Generate response
-        response = self.llm.invoke(messages)
-        
-        return response.content
+REQUIREMENTS:
+1. Questions should sound like typical HR interview questions (experience, background, skills overview)
+2. Keep questions conversational and non-technical
+3. Each question should be 5-10 words long
+4. NO personal sensitive information (phone, address, age, etc.)
+5. Questions should be broad and open-ended
+6. Examples: "Tell me about yourself", "What's your background?", "Walk me through your experience"
+
+{format_instructions}
+
+Generate the 2 questions now:""")
+            ])
+            
+            # Create chain with output parser
+            chain = suggestion_prompt | self.llm | parser
+            
+            # Generate suggestions
+            result = chain.invoke({
+                "context": context_string,
+                "format_instructions": parser.get_format_instructions()
+            })
+            
+            # Extract and validate questions
+            if isinstance(result, dict) and "questions" in result:
+                questions = result["questions"]
+            elif isinstance(result, list):
+                questions = result
+            else:
+                return fallback
+            
+            # Clean and validate
+            cleaned = []
+            for q in questions[:2]:  # Take only first 2
+                if isinstance(q, str) and 5 <= len(q) <= 120:
+                    # Remove numbering and bullets
+                    import re
+                    q = re.sub(r'^\d+[\.\)]\s*', '', q.strip())
+                    q = re.sub(r'^[-•]\s*', '', q)
+                    if q:
+                        cleaned.append(q)
+            
+            # Return cleaned or fallback
+            if len(cleaned) >= 2:
+                return cleaned[:2]
+            elif len(cleaned) == 1:
+                return cleaned + [fallback[1]]
+            else:
+                return fallback
+                
+        except Exception as e:
+            print(f"Error generating suggestions: {str(e)}")
+            return fallback
 
 
 # Singleton instance
@@ -282,7 +335,6 @@ def generate_suggested_questions(
     Raises:
         Exception: If generation fails (caller should handle with fallback)
     """
-    # Default fallback suggestions
     fallback_suggestions = [
         "Can you tell me about your background?",
         "What kind of experience do you have?"
@@ -295,90 +347,7 @@ def generate_suggested_questions(
             print(f"RAG pipeline error for suggestions: {error}")
             return fallback_suggestions
         
-        # Determine query for context retrieval
-        retrieval_query = (
-            last_user_message or 
-            conversation_summary or 
-            "portfolio overview"
-        )
-        
-        # Retrieve 3-5 relevant resume chunks for context
-        chunks = pipeline._retrieve_context(retrieval_query, top_k=4)
-        context_string = pipeline._build_context_string(chunks)
-        
-        # Build prompt for generating suggestions
-        suggestion_prompt = f"""Based on the following resume context, generate EXACTLY 2 simple HR screening questions that a recruiter might ask a candidate.
-
-RESUME CONTEXT:
-{context_string}
-
-REQUIREMENTS:
-1. Questions should sound like typical HR interview questions (experience, background, skills overview)
-2. Keep questions conversational and non-technical
-3. Each question should be 5-10 words long
-4. NO personal sensitive information (phone, address, age, etc.)
-5. Questions should be broad and open-ended
-6. NO numbering or bullet points in the output
-7. Examples: "Tell me about yourself", "What's your background?", "Walk me through your experience"
-
-OUTPUT FORMAT:
-Return ONLY a valid JSON array of strings with exactly 2 questions. Example:
-["Can you tell me about your background?", "What kind of experience do you have?"]
-
-Generate the 2 questions now:"""
-        
-        # Generate suggestions using LLM
-        messages = [HumanMessage(content=suggestion_prompt)]
-        response = pipeline.llm.invoke(messages)
-        
-        # Parse JSON response
-        import json
-        import re
-        
-        response_text = response.content.strip()
-        
-        # Try to extract JSON array from response
-        # Handle cases where model wraps response in markdown code blocks
-        json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(0)
-            suggestions = json.loads(json_str)
-            
-            # Validate and clean suggestions
-            if isinstance(suggestions, list):
-                # Clean each suggestion
-                cleaned = []
-                for s in suggestions:
-                    if isinstance(s, str):
-                        # Trim whitespace and remove numbering
-                        s = s.strip()
-                        s = re.sub(r'^\d+[\.\)]\s*', '', s)  # Remove "1. " or "1) "
-                        s = re.sub(r'^[-•]\s*', '', s)  # Remove bullet points
-                        
-                        # Filter out too long items
-                        if len(s) <= 120 and s:
-                            cleaned.append(s)
-                
-                # Deduplicate while preserving order
-                seen = set()
-                deduplicated = []
-                for s in cleaned:
-                    s_lower = s.lower()
-                    if s_lower not in seen:
-                        seen.add(s_lower)
-                        deduplicated.append(s)
-                
-                # Ensure exactly 2 items
-                if len(deduplicated) >= 2:
-                    return deduplicated[:2]
-                else:
-                    # Pad with fallback if needed
-                    remaining = 2 - len(deduplicated)
-                    return deduplicated + fallback_suggestions[:remaining]
-        
-        # If parsing failed, return fallback
-        print(f"Failed to parse suggestions JSON: {response_text[:200]}")
-        return fallback_suggestions
+        return pipeline.generate_suggested_questions(last_user_message, conversation_summary)
         
     except Exception as e:
         print(f"Error generating suggestions: {str(e)}")
