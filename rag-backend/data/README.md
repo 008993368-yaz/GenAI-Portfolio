@@ -44,6 +44,8 @@ Each chunk stored in Pinecone includes:
 
 The `resume.pdf` file should be in `.gitignore` to prevent accidental commits. Only commit this README file, not your actual resume.
 
+**Environment Variables:** This project no longer uses a `.env` file. Set environment variables directly in your system or pass them to Docker containers using the `-e` flag.
+
 ## 💡 Tips
 
 - **Test with Sample:** Start with a sample resume to test the pipeline

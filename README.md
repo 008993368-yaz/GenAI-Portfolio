@@ -50,25 +50,28 @@ cd GenAI-Portfolio
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the `rag-backend/` directory with your API credentials:
+Set the following environment variables in your system or pass them to Docker:
 
-```bash
-# Navigate to backend directory
-cd rag-backend
+**Required Environment Variables:**
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `PINECONE_API_KEY` - Your Pinecone API key
+- `PINECONE_INDEX_NAME` - Your Pinecone index name
+- `PINECONE_NAMESPACE` - Namespace for resume vectors (default: `resume-v1`)
 
-# Create .env file (Windows PowerShell)
-New-Item -Path .env -ItemType File
-
-# Or on macOS/Linux
-touch .env
+**Windows PowerShell:**
+```powershell
+$env:OPENAI_API_KEY="sk-your-openai-key-here"
+$env:PINECONE_API_KEY="pcsk-your-pinecone-key-here"
+$env:PINECONE_INDEX_NAME="portfolio-resume"
+$env:PINECONE_NAMESPACE="resume-v1"
 ```
 
-Add the following to your `.env` file:
-```env
-OPENAI_API_KEY=sk-your-openai-key-here
-PINECONE_API_KEY=pcsk-your-pinecone-key-here
-PINECONE_INDEX_NAME=portfolio-resume
-PINECONE_NAMESPACE=resume-v1
+**macOS/Linux:**
+```bash
+export OPENAI_API_KEY="sk-your-openai-key-here"
+export PINECONE_API_KEY="pcsk-your-pinecone-key-here"
+export PINECONE_INDEX_NAME="portfolio-resume"
+export PINECONE_NAMESPACE="resume-v1"
 ```
 
 **Get your API keys:**
@@ -76,7 +79,7 @@ PINECONE_NAMESPACE=resume-v1
 - Pinecone: https://www.pinecone.io/ (create a free account)
 
 **Note:** Create a Pinecone index with:
-- Dimensions: 1536 (for OpenAI text-embedding-ada-002)
+- Dimensions: 768 (for Pinecone's llama-text-embed-v2)
 - Metric: Cosine similarity
 
 ### 3. Add Your Resume
@@ -128,8 +131,14 @@ python scripts/ingest_resume.py
 cd ..
 
 # Start both frontend and backend with Docker Compose
+# Pass environment variables directly
 docker-compose up --build
 ```
+
+**Note:** Environment variables can be passed via:
+- System environment variables (set before running docker-compose)
+- Docker Compose environment section (edit docker-compose.yml)
+- Command line: `docker-compose up` will use system environment variables
 
 The application will be available at:
 - **Frontend**: http://localhost:8080
@@ -227,12 +236,17 @@ For local development, the default `http://localhost:8000` works with Docker Com
 
 ### Backend Configuration
 
-All configuration is managed through environment variables in `rag-backend/.env`:
+All configuration is managed through environment variables:
 
 - `OPENAI_API_KEY` - Your OpenAI API key
 - `PINECONE_API_KEY` - Your Pinecone API key
 - `PINECONE_INDEX_NAME` - Pinecone index name
-- `PINECONE_NAMESPACE` - Namespace for resume vectors (e.g., "resume-v1")
+- `PINECONE_NAMESPACE` - Namespace for resume vectors (default: "resume-v1")
+- `PINECONE_EMBED_MODEL` - Embedding model (default: "llama-text-embed-v2")
+- `OPENAI_MODEL` - Chat model (default: "gpt-4o-mini")
+- `RAG_TOP_K` - Number of chunks to retrieve (default: 5)
+
+These can be set in your system environment or passed to Docker containers.
 
 ### Chunking Configuration
 
@@ -256,8 +270,13 @@ docker build -t portfolio-backend ./rag-backend
 ### Running with Custom Configuration
 
 ```bash
-# Run backend with custom port
-docker run -p 9000:8000 --env-file rag-backend/.env portfolio-backend
+# Run backend with custom port and environment variables
+docker run -p 9000:8000 \
+  -e OPENAI_API_KEY="your-key" \
+  -e PINECONE_API_KEY="your-key" \
+  -e PINECONE_INDEX_NAME="your-index" \
+  -e PINECONE_NAMESPACE="resume-v1" \
+  portfolio-backend
 
 # Run frontend with custom port
 docker run -p 3000:80 portfolio-frontend
@@ -329,9 +348,10 @@ To update the chatbot's knowledge:
 **Issue**: Backend can't find API keys.
 
 **Solution**:
-- Verify `.env` file exists in `rag-backend/` directory
-- Check that Docker Compose is configured to use the env file
-- Ensure no extra spaces in `.env` file
+- Verify environment variables are set in your system
+- For Docker: Pass variables using `-e` flag or set them in docker-compose.yml
+- Check variable names are correct (case-sensitive)
+- Ensure values don't have quotes or extra spaces when setting in shell
 
 ### Pinecone Connection Errors
 
