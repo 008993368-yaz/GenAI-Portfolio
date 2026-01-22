@@ -1068,11 +1068,70 @@ body {
 /* Chat Input Form */
 .chat-input-form {
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+    gap: 12px;
     padding: 16px 20px;
     background: var(--white);
     border-top: 1px solid #e2e8f0;
     border-radius: 0 0 16px 16px;
+}
+
+/* Suggested Questions */
+.suggested-questions {
+    width: 100%;
+}
+
+.suggestions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.suggestion-chip {
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    font-size: 0.7rem;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.suggestion-chip:hover {
+    background: #f7fafc;
+    border-color: var(--secondary-color);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.15);
+}
+
+.suggestion-chip:active {
+    transform: translateY(0);
+}
+
+.suggestion-chip-skeleton {
+    background: linear-gradient(90deg, #f7fafc 25%, #edf2f7 50%, #f7fafc 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    color: transparent;
+    cursor: default;
+    pointer-events: none;
+    min-height: 44px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
 }
 
 .chat-input {
@@ -1293,5 +1352,14 @@ body {
     .chat-message-bubble {
         max-width: 85%;
         font-size: 0.9rem;
+    }
+
+    .suggestions-grid {
+        gap: 8px;
+    }
+
+    .suggestion-chip {
+        font-size: 0.75rem;
+        padding: 10px 14px;
     }
 }

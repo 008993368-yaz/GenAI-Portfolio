@@ -37,6 +37,26 @@ def test_info():
     print_response("Configuration Info", response)
 
 
+def test_suggestions_initial():
+    """Test suggestions endpoint - initial load (no context)"""
+    payload = {
+        "last_user_message": None,
+        "conversation_summary": None
+    }
+    response = requests.post(f"{BASE_URL}/suggestions", json=payload)
+    print_response("Initial Suggestions (No Context)", response)
+
+
+def test_suggestions_with_context():
+    """Test suggestions endpoint - with context"""
+    payload = {
+        "last_user_message": "Tell me about your work at Accenture",
+        "conversation_summary": None
+    }
+    response = requests.post(f"{BASE_URL}/suggestions", json=payload)
+    print_response("Suggestions After Accenture Question", response)
+
+
 def test_search_accenture():
     """Test search for Accenture role/responsibilities"""
     payload = {
@@ -78,6 +98,8 @@ if __name__ == "__main__":
         # Run tests
         test_health()
         test_info()
+        test_suggestions_initial()
+        test_suggestions_with_context()
         test_search_accenture()
         test_search_testing_frameworks()
         test_search_education()

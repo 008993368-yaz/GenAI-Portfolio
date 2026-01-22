@@ -263,3 +263,124 @@ def generate_rag_response(
         raise Exception("RAG pipeline initialization failed")
     
     return pipeline.generate_response(query, conversation_history, top_k)
+
+
+def generate_suggested_questions(
+    last_user_message: Optional[str] = None,
+    conversation_summary: Optional[str] = None
+) -> List[str]:
+    """
+    Generate 2 contextually relevant suggested questions about Yazhini's portfolio
+    
+    Args:
+        last_user_message: Most recent user message for context
+        conversation_summary: Summary of the conversation so far
+        
+    Returns:
+        List of 2 suggested questions
+        
+    Raises:
+        Exception: If generation fails (caller should handle with fallback)
+    """
+    # Default fallback suggestions
+    fallback_suggestions = [
+        "Can you tell me about your background?",
+        "What kind of experience do you have?"
+    ]
+    
+    try:
+        pipeline, error = get_rag_pipeline()
+        
+        if error or not pipeline:
+            print(f"RAG pipeline error for suggestions: {error}")
+            return fallback_suggestions
+        
+        # Determine query for context retrieval
+        retrieval_query = (
+            last_user_message or 
+            conversation_summary or 
+            "portfolio overview"
+        )
+        
+        # Retrieve 3-5 relevant resume chunks for context
+        chunks = pipeline._retrieve_context(retrieval_query, top_k=4)
+        context_string = pipeline._build_context_string(chunks)
+        
+        # Build prompt for generating suggestions
+        suggestion_prompt = f"""Based on the following resume context, generate EXACTLY 2 simple HR screening questions that a recruiter might ask a candidate.
+
+RESUME CONTEXT:
+{context_string}
+
+REQUIREMENTS:
+1. Questions should sound like typical HR interview questions (experience, background, skills overview)
+2. Keep questions conversational and non-technical
+3. Each question should be 5-10 words long
+4. NO personal sensitive information (phone, address, age, etc.)
+5. Questions should be broad and open-ended
+6. NO numbering or bullet points in the output
+7. Examples: "Tell me about yourself", "What's your background?", "Walk me through your experience"
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON array of strings with exactly 2 questions. Example:
+["Can you tell me about your background?", "What kind of experience do you have?"]
+
+Generate the 2 questions now:"""
+        
+        # Generate suggestions using LLM
+        messages = [HumanMessage(content=suggestion_prompt)]
+        response = pipeline.llm.invoke(messages)
+        
+        # Parse JSON response
+        import json
+        import re
+        
+        response_text = response.content.strip()
+        
+        # Try to extract JSON array from response
+        # Handle cases where model wraps response in markdown code blocks
+        json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(0)
+            suggestions = json.loads(json_str)
+            
+            # Validate and clean suggestions
+            if isinstance(suggestions, list):
+                # Clean each suggestion
+                cleaned = []
+                for s in suggestions:
+                    if isinstance(s, str):
+                        # Trim whitespace and remove numbering
+                        s = s.strip()
+                        s = re.sub(r'^\d+[\.\)]\s*', '', s)  # Remove "1. " or "1) "
+                        s = re.sub(r'^[-•]\s*', '', s)  # Remove bullet points
+                        
+                        # Filter out too long items
+                        if len(s) <= 120 and s:
+                            cleaned.append(s)
+                
+                # Deduplicate while preserving order
+                seen = set()
+                deduplicated = []
+                for s in cleaned:
+                    s_lower = s.lower()
+                    if s_lower not in seen:
+                        seen.add(s_lower)
+                        deduplicated.append(s)
+                
+                # Ensure exactly 2 items
+                if len(deduplicated) >= 2:
+                    return deduplicated[:2]
+                else:
+                    # Pad with fallback if needed
+                    remaining = 2 - len(deduplicated)
+                    return deduplicated + fallback_suggestions[:remaining]
+        
+        # If parsing failed, return fallback
+        print(f"Failed to parse suggestions JSON: {response_text[:200]}")
+        return fallback_suggestions
+        
+    except Exception as e:
+        print(f"Error generating suggestions: {str(e)}")
+        return fallback_suggestions
+

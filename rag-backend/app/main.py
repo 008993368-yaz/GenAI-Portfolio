@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from app.services.retriever import retrieve_resume_context
 from app.services.guardrails import is_about_yazhini, get_off_topic_response
 from app.services.memory import get_memory
-from app.services.rag import generate_rag_response
+from app.services.rag import generate_rag_response, generate_suggested_questions
 
 # Load environment variables
 load_dotenv()
@@ -65,6 +65,15 @@ class SearchResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str
+
+
+class SuggestionsRequest(BaseModel):
+    last_user_message: str | None = Field(None, description="Last user message for context")
+    conversation_summary: str | None = Field(None, description="Summary of conversation")
+
+
+class SuggestionsResponse(BaseModel):
+    suggestions: List[str] = Field(..., description="List of suggested questions")
 
 
 # Health check endpoint
@@ -200,6 +209,46 @@ async def search_resume(request: SearchRequest):
                 "detail": f"Failed to search resume: {str(e)}"
             }
         )
+
+
+# Suggestions endpoint
+@app.post("/suggestions", response_model=SuggestionsResponse)
+async def get_suggestions(request: SuggestionsRequest):
+    """
+    Generate suggested questions for the chatbot
+    
+    Uses RAG retrieval to get relevant context, then generates
+    contextually relevant questions about Yazhini's portfolio.
+    
+    Args:
+        request: SuggestionsRequest with optional last_user_message and conversation_summary
+        
+    Returns:
+        SuggestionsResponse with 2 suggested questions
+        
+    Raises:
+        HTTPException: If generation fails
+    """
+    try:
+        # Generate suggestions using RAG service
+        suggestions = generate_suggested_questions(
+            last_user_message=request.last_user_message,
+            conversation_summary=request.conversation_summary
+        )
+        
+        return SuggestionsResponse(suggestions=suggestions)
+        
+    except Exception as e:
+        # Log error but don't expose details to client
+        print(f"Suggestions generation error: {str(e)}")
+        
+        # Return fallback suggestions on any error
+        fallback_suggestions = [
+            "Can you tell me about your background?",
+            "What kind of experience do you have?"
+        ]
+        
+        return SuggestionsResponse(suggestions=fallback_suggestions)
 
 
 # Additional info endpoint
