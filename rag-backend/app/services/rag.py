@@ -3,7 +3,6 @@ RAG Service
 LangChain-based RAG pipeline: retrieval from Pinecone + OpenAI generation
 """
 
-import os
 from typing import List, Dict, Any, Optional
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -12,6 +11,8 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.schema import HumanMessage, AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
+
+from app.config import config
 
 from app.services.retriever import ResumeRetriever, RetrieverConfig
 
@@ -27,11 +28,11 @@ class RAGConfig:
     def __init__(self):
         # Pinecone/Retriever settings (delegated to RetrieverConfig)
         self.retriever_config = RetrieverConfig()
-        self.rag_top_k = int(os.getenv("RAG_TOP_K", "5"))
+        self.rag_top_k = config.RAG_TOP_K
         
         # OpenAI settings
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.openai_api_key = config.OPENAI_API_KEY
+        self.openai_model = config.OPENAI_MODEL
         
     def validate(self) -> tuple[bool, Optional[str]]:
         """Validate required environment variables"""

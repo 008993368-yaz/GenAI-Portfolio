@@ -44,33 +44,48 @@ pip install -r requirements.txt
 # Build image
 docker build -t rag-backend .
 
-# Run container
-docker run --env-file .env -v $(pwd)/data:/app/data rag-backend
+# Run container with environment variables
+docker run \
+  -e OPENAI_API_KEY=\"your-key\" \
+  -e PINECONE_API_KEY=\"your-key\" \
+  -e PINECONE_INDEX_NAME=\"your-index\" \
+  -v $(pwd)/data:/app/data \
+  rag-backend
 ```
 
-### 3. Configure Environment
+### 3. Configure Environment Variables
 
-Create a `.env` file in the `rag-backend/` directory:
+Set the following environment variables in your system:
 
-```env
-# OpenAI Configuration
-OPENAI_API_KEY=sk-your-actual-key-here
+**Required:**
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `PINECONE_API_KEY` - Your Pinecone API key
+- `PINECONE_INDEX_NAME` - Your Pinecone index name
 
-# Pinecone Configuration
-PINECONE_API_KEY=pcsk-your-actual-key-here
-PINECONE_INDEX_NAME=portfolio-resume
-PINECONE_NAMESPACE=resume-v1
+**Optional (with defaults):**
+- `PINECONE_NAMESPACE` - Namespace for vectors (default: `resume-v1`)
+- `PINECONE_EMBED_MODEL` - Embedding model (default: `llama-text-embed-v2`)
+- `OPENAI_MODEL` - Chat model (default: `gpt-4o-mini`)
+- `RAG_TOP_K` - Number of chunks to retrieve (default: `5`)
 
-# Optional: Model Configuration
-# EMBEDDING_MODEL=text-embedding-ada-002
-# CHAT_MODEL=gpt-4
+**Windows PowerShell:**
+```powershell
+$env:OPENAI_API_KEY="sk-your-key-here"
+$env:PINECONE_API_KEY="pcsk-your-key-here"
+$env:PINECONE_INDEX_NAME="portfolio-resume"
+```
+
+**macOS/Linux:**
+```bash
+export OPENAI_API_KEY="sk-your-key-here"
+export PINECONE_API_KEY="pcsk-your-key-here"
+export PINECONE_INDEX_NAME="portfolio-resume"
 ```
 
 **Important:**
-- Never commit the `.env` file to version control (it's in `.gitignore`)
 - Get your OpenAI key: https://platform.openai.com/api-keys
 - Get your Pinecone key: https://www.pinecone.io/
-- Create a Pinecone index with 1536 dimensions (for ada-002 embeddings)
+- Create a Pinecone index with 768 dimensions (for llama-text-embed-v2)
 
 ### 4. Add Your Resume
 
@@ -88,40 +103,34 @@ data/resume.pdf
 .venv\Scripts\activate  # Windows
 # source .venv/bin/activate  # macOS/Linux
 
+# Ensure environment variables are set
+# Windows PowerShell:
+$env:OPENAI_API_KEY="your-key"
+$env:PINECONE_API_KEY="your-key"
+$env:PINECONE_INDEX_NAME="your-index"
+
+# macOS/Linux:
+# export OPENAI_API_KEY="your-key"
+# export PINECONE_API_KEY="your-key"
+# export PINECONE_INDEX_NAME="your-index"
+
 # Run ingestion script
 python scripts/ingest_resume.py
 ```
 
 ### Inside Docker
 
-First, create a Dockerfile:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
-COPY scripts/ ./scripts/
-COPY data/ ./data/
-COPY .env .env
-
-# Run ingestion
-CMD ["python", "scripts/ingest_resume.py"]
-```
-
-Then run:
-
 ```bash
-# Build
+# Build the Docker image
 docker build -t rag-backend .
 
-# Run ingestion
-docker run --rm --env-file .env -v $(pwd)/data:/app/data rag-backend python scripts/ingest_resume.py
+# Run ingestion with environment variables
+docker run --rm \
+  -e OPENAI_API_KEY="your-key" \
+  -e PINECONE_API_KEY="your-key" \
+  -e PINECONE_INDEX_NAME="your-index" \
+  -v $(pwd)/data:/app/data \
+  rag-backend python scripts/ingest_resume.py
 ```
 
 ## Ingestion Details
@@ -149,14 +158,17 @@ Each vector includes:
 
 ```
 rag-backend/
+├── app/
+│   ├── config.py           # Environment variable configuration
+│   ├── main.py             # FastAPI application
+│   └── services/           # RAG, retrieval, memory, guardrails
 ├── data/
 │   ├── resume.pdf          # Your resume (you provide)
 │   └── README.md           # Data directory info
 ├── scripts/
 │   └── ingest_resume.py    # Ingestion script
-├── .env                     # Your actual keys (gitignored)
-├── .env.example             # Example environment variables
 ├── requirements.txt         # Python dependencies
+├── Dockerfile              # Docker configuration
 └── README.md               # This file
 ```
 
@@ -242,8 +254,9 @@ curl -X POST http://localhost:8000/chat \
 - Check file path and name
 
 **"Missing required environment variables"**
-- Verify `.env` file exists
-- Check all required keys are set
+- Verify environment variables are set in your system
+- Check variable names are correct (case-sensitive)
+- For Docker: ensure variables are passed using `-e` flag or docker-compose environment section
 
 **Pinecone connection errors**
 - Verify API key is correct
