@@ -4,12 +4,13 @@ A modern, AI-powered portfolio website featuring a React frontend and a RAG (Ret
 
 ## 🌟 Features
 
-- **Interactive Portfolio Website**: Beautiful, responsive single-page application built with React
+- **Interactive Portfolio Website**: Beautiful, responsive single-page application built with React and Vite
 - **AI-Powered Chatbot**: Intelligent assistant that answers questions about your professional background
-- **RAG Backend**: Semantic search over your resume using LangChain, Pinecone, and OpenAI
+- **RAG Backend**: Semantic search over your resume using LangChain, Pinecone, and OpenAI embeddings
 - **Containerized Deployment**: Full Docker Compose setup for easy deployment
-- **Real-time Chat**: WebSocket-based chat interface with conversation memory
+- **Chat with Memory**: Conversation history and context-aware responses
 - **Smart Guardrails**: Ensures the chatbot stays on topic about your portfolio
+- **Smooth Animations**: Intersection observers and scroll effects for engaging UX
 
 ## 🏗️ Architecture
 
@@ -49,17 +50,34 @@ cd GenAI-Portfolio
 
 ### 2. Configure Environment Variables
 
-```bash
-# Copy the example environment file
-cp rag-backend/.env.example rag-backend/.env
+Create a `.env` file in the `rag-backend/` directory with your API credentials:
 
-# Edit the .env file with your actual API keys
-# Required variables:
-# - OPENAI_API_KEY=sk-...
-# - PINECONE_API_KEY=pcsk_...
-# - PINECONE_INDEX_NAME=your-index-name
-# - PINECONE_NAMESPACE=resume-v1
+```bash
+# Navigate to backend directory
+cd rag-backend
+
+# Create .env file (Windows PowerShell)
+New-Item -Path .env -ItemType File
+
+# Or on macOS/Linux
+touch .env
 ```
+
+Add the following to your `.env` file:
+```env
+OPENAI_API_KEY=sk-your-openai-key-here
+PINECONE_API_KEY=pcsk-your-pinecone-key-here
+PINECONE_INDEX_NAME=portfolio-resume
+PINECONE_NAMESPACE=resume-v1
+```
+
+**Get your API keys:**
+- OpenAI: https://platform.openai.com/api-keys
+- Pinecone: https://www.pinecone.io/ (create a free account)
+
+**Note:** Create a Pinecone index with:
+- Dimensions: 1536 (for OpenAI text-embedding-ada-002)
+- Metric: Cosine similarity
 
 ### 3. Add Your Resume
 
@@ -69,7 +87,7 @@ Place your resume PDF in the backend data directory:
 cp /path/to/your/resume.pdf rag-backend/data/resume.pdf
 ```
 
-### 4. Ingest Your Resume (First Time Only)
+### 4. Ingest Your Resume (First Time Setup)
 
 This step processes your resume and stores it in Pinecone for semantic search:
 
@@ -80,17 +98,28 @@ cd rag-backend
 python -m venv .venv
 
 # Activate it
-# On Windows:
-.venv\Scripts\activate
+# On Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# On Windows CMD:
+.venv\Scripts\activate.bat
 # On macOS/Linux:
 source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run ingestion
+# Run ingestion script
 python scripts/ingest_resume.py
 ```
+
+**What happens during ingestion:**
+1. Your PDF is loaded and parsed
+2. Text is split into semantic chunks (600 chars with 100 char overlap)
+3. Each chunk is embedded using OpenAI's embedding model
+4. Vectors are uploaded to Pinecone with metadata
+5. Idempotent process - safe to run multiple times
+
+**Expected output:** You should see a summary showing pages processed, chunks created, and vectors upserted.
 
 ### 5. Launch the Application
 
@@ -186,11 +215,15 @@ See `rag-backend/CHAT_API_TESTS.md` and `rag-backend/CURL_TESTS.md` for comprehe
 
 ### Frontend Configuration
 
-The frontend connects to the backend API. Update the API URL in:
+The frontend connects to the backend API. For production deployment, update the API URL in:
 ```javascript
 // frontend/src/services/chatApi.js
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-production-backend-url.com'
+  : 'http://localhost:8000';
 ```
+
+For local development, the default `http://localhost:8000` works with Docker Compose.
 
 ### Backend Configuration
 
@@ -228,6 +261,28 @@ docker run -p 9000:8000 --env-file rag-backend/.env portfolio-backend
 
 # Run frontend with custom port
 docker run -p 3000:80 portfolio-frontend
+```
+
+### Docker Compose Commands
+
+```bash
+# Start services
+docker-compose up
+
+# Start in detached mode
+docker-compose up -d
+
+# Rebuild and start
+docker-compose up --build
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
 ```
 
 ## 📝 Updating Your Resume
@@ -305,6 +360,28 @@ MIT License - feel free to use this as a template for your own portfolio!
 
 Built with modern web technologies and AI to showcase professional experience in an interactive way.
 
+## 🚀 Deployment
+
+### Deploying to Production
+
+**Frontend:**
+- Build the production bundle: `npm run build` in `frontend/`
+- Deploy the `dist/` folder to any static hosting (Vercel, Netlify, GitHub Pages)
+- Update the API base URL for your production backend
+
+**Backend:**
+- Deploy to platforms like Railway, Render, or AWS
+- Ensure environment variables are set
+- Make sure Pinecone index is accessible from production
+- Update CORS settings in `app/main.py` to allow your frontend domain
+
+**Full Stack:**
+- Use Docker Compose on a VPS (DigitalOcean, AWS EC2, etc.)
+- Configure reverse proxy (Nginx) for production
+- Set up SSL certificates (Let's Encrypt)
+
 ---
 
-Made with ❤️ by Yazhini
+**Author:** Yazhini  
+**Repository:** [GenAI-Portfolio](https://github.com/008993368-yaz/GenAI-Portfolio)  
+**License:** MIT
