@@ -1,48 +1,37 @@
 """
 Session Memory Service
-In-memory conversation history management per session
+LangChain-based conversation history management per session
 """
 
 from typing import Dict, List, Optional
-from collections import defaultdict, deque
-from dataclasses import dataclass
-from datetime import datetime
-
-
-@dataclass
-class Message:
-    """Represents a single message in conversation history"""
-    role: str  # "user" or "assistant"
-    content: str
-    timestamp: datetime
-    
-    def to_dict(self) -> Dict:
-        """Convert to dictionary for LangChain"""
-        return {
-            "role": self.role,
-            "content": self.content
-        }
+from collections import defaultdict
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.schema import HumanMessage, AIMessage, BaseMessage
 
 
 class SessionMemory:
     """
-    Manages conversation history for multiple sessions
+    Manages LangChain conversation memory for multiple sessions
     
-    Stores the last N messages per session in memory.
-    Thread-safe for basic operations (not production-ready for high concurrency).
+    Uses ConversationBufferWindowMemory to store the last N messages per session.
+    Each session has its own independent memory instance.
     """
     
     def __init__(self, max_messages_per_session: int = 10):
         """
-        Initialize session memory
+        Initialize session memory manager
         
         Args:
-            max_messages_per_session: Maximum messages to keep per session
+            max_messages_per_session: Maximum message pairs (user+AI) to keep per session
         """
-        self.max_messages = max_messages_per_session
-        # Use deque for efficient FIFO operations
-        self._sessions: Dict[str, deque] = defaultdict(
-            lambda: deque(maxlen=max_messages_per_session)
+        # Convert to message window size (divide by 2 since each exchange is user+AI)
+        self.k = max(1, max_messages_per_session // 2)
+        self._sessions: Dict[str, ConversationBufferWindowMemory] = defaultdict(
+            lambda: ConversationBufferWindowMemory(
+                k=self.k,
+                return_messages=True,
+                memory_key="chat_history"
+            )
         )
     
     def add_message(self, session_id: str, role: str, content: str) -> None:
@@ -54,37 +43,63 @@ class SessionMemory:
             role: "user" or "assistant"
             content: Message content
         """
-        message = Message(
-            role=role,
-            content=content,
-            timestamp=datetime.utcnow()
-        )
-        self._sessions[session_id].append(message)
+        memory = self._sessions[session_id]
+        
+        if role == "user":
+            # Save user input
+            memory.chat_memory.add_user_message(content)
+        elif role == "assistant":
+            # Save AI response
+            memory.chat_memory.add_ai_message(content)
     
-    def get_history(self, session_id: str) -> List[Message]:
+    def get_history(self, session_id: str) -> List[BaseMessage]:
         """
-        Get conversation history for a session
+        Get conversation history for a session as LangChain messages
         
         Args:
             session_id: Unique session identifier
             
         Returns:
-            List of messages in chronological order
+            List of BaseMessage objects (HumanMessage, AIMessage)
         """
-        return list(self._sessions.get(session_id, []))
+        if session_id not in self._sessions:
+            return []
+        
+        memory = self._sessions[session_id]
+        return memory.chat_memory.messages
     
     def get_history_for_llm(self, session_id: str) -> List[Dict]:
         """
-        Get conversation history formatted for LLM context
+        Get conversation history formatted as dictionaries for LLM context
         
         Args:
             session_id: Unique session identifier
             
         Returns:
-            List of message dicts with role and content
+            List of message dicts with 'role' and 'content' keys
         """
         messages = self.get_history(session_id)
-        return [msg.to_dict() for msg in messages]
+        formatted = []
+        
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                formatted.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                formatted.append({"role": "assistant", "content": msg.content})
+        
+        return formatted
+    
+    def get_memory(self, session_id: str) -> ConversationBufferWindowMemory:
+        """
+        Get the LangChain memory instance for a session
+        
+        Args:
+            session_id: Unique session identifier
+            
+        Returns:
+            ConversationBufferWindowMemory instance
+        """
+        return self._sessions[session_id]
     
     def clear_session(self, session_id: str) -> None:
         """
@@ -102,7 +117,9 @@ class SessionMemory:
     
     def get_message_count(self, session_id: str) -> int:
         """Get number of messages in a session"""
-        return len(self._sessions.get(session_id, []))
+        if session_id not in self._sessions:
+            return 0
+        return len(self._sessions[session_id].chat_memory.messages)
 
 
 # Global singleton instance
