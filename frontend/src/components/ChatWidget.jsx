@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { sendMessage } from '../services/chatApi';
+import SuggestedQuestions from './SuggestedQuestions';
 
 const ChatWidget = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
@@ -10,6 +11,8 @@ const ChatWidget = ({ isOpen, onClose }) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState(null);
+  const [refreshSuggestions, setRefreshSuggestions] = useState(0);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -17,16 +20,20 @@ const ChatWidget = ({ isOpen, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
+  const handleSendMessage = async (messageText = null) => {
+    // Allow passing message text directly (for suggestion clicks)
+    const userMessage = (messageText || inputValue).trim();
     
-    if (!inputValue.trim() || isLoading) return;
+    if (!userMessage || isLoading) return;
 
-    const userMessage = inputValue.trim();
-    setInputValue('');
+    // Clear input only if it came from the input field
+    if (!messageText) {
+      setInputValue('');
+    }
 
     // Add user message to chat
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    setLastUserMessage(userMessage);
     setIsLoading(true);
 
     try {
@@ -35,6 +42,9 @@ const ChatWidget = ({ isOpen, onClose }) => {
       
       // Add assistant reply
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      
+      // Refresh suggestions after assistant responds
+      setRefreshSuggestions((prev) => prev + 1);
     } catch (error) {
       // Add error message
       setMessages((prev) => [
@@ -47,6 +57,15 @@ const ChatWidget = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    handleSendMessage();
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    handleSendMessage(suggestion);
   };
 
   if (!isOpen) return null;
@@ -94,31 +113,41 @@ const ChatWidget = ({ isOpen, onClose }) => {
       </div>
 
       {/* Input Area */}
-      <form className="chat-input-form" onSubmit={handleSendMessage}>
-        <input
-          type="text"
-          className="chat-input"
-          placeholder="Ask me anything..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          disabled={isLoading}
+      <form className="chat-input-form" onSubmit={handleFormSubmit}>
+        {/* Suggested Questions */}
+        <SuggestedQuestions
+          lastUserMessage={lastUserMessage}
+          onSuggestionClick={handleSuggestionClick}
+          isVisible={!isLoading}
+          refreshTrigger={refreshSuggestions}
         />
-        <button
-          type="submit"
-          className="chat-send-button"
-          disabled={isLoading || !inputValue.trim()}
-          aria-label="Send message"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            width="20"
-            height="20"
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            type="text"
+            className="chat-input"
+            placeholder="Ask me anything..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            className="chat-send-button"
+            disabled={isLoading || !inputValue.trim()}
+            aria-label="Send message"
           >
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              width="20"
+              height="20"
+            >
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -53,3 +53,45 @@ export async function sendMessage(message) {
     throw new Error('Failed to connect to chat service. Please try again.');
   }
 }
+
+/**
+ * Fetch suggested questions from the backend
+ * @param {Object} payload - Request payload
+ * @param {string|null} payload.last_user_message - Last user message for context
+ * @param {string|null} payload.conversation_summary - Summary of conversation
+ * @returns {Promise<{suggestions: string[]}>} - Object with suggestions array
+ * @throws {Error} - If request fails
+ */
+export async function fetchSuggestions(payload = {}) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/suggestions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        last_user_message: payload.last_user_message || null,
+        conversation_summary: payload.conversation_summary || null,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data; // { suggestions: string[] }
+    
+  } catch (error) {
+    console.error('Suggestions API error:', error);
+    
+    // Return fallback suggestions on error
+    return {
+      suggestions: [
+        "Can you tell me about your background?",
+        "What kind of experience do you have?"
+      ]
+    };
+  }
+}
+
