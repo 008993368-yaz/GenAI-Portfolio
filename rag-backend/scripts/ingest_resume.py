@@ -4,12 +4,15 @@ RAG Ingestion Script for Portfolio Chatbot
 Loads resume PDF, chunks it, and upserts to Pinecone (embeddings handled by Pinecone inference)
 """
 
-import os
 import sys
 import hashlib
 from pathlib import Path
 from typing import List, Dict, Any
-from dotenv import load_dotenv
+
+# Add parent directory to path to import from app
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from app.config import config
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -18,11 +21,9 @@ from pinecone import Pinecone, ServerlessSpec
 
 def load_environment():
     """Load and validate environment variables"""
-    load_dotenv()
-    
     required_vars = {
-        "PINECONE_API_KEY": os.getenv("PINECONE_API_KEY"),
-        "PINECONE_INDEX_NAME": os.getenv("PINECONE_INDEX_NAME"),
+        "PINECONE_API_KEY": config.PINECONE_API_KEY,
+        "PINECONE_INDEX_NAME": config.PINECONE_INDEX_NAME,
     }
     
     missing = [k for k, v in required_vars.items() if not v]
@@ -31,7 +32,7 @@ def load_environment():
     
     return {
         **required_vars,
-        "PINECONE_NAMESPACE": os.getenv("PINECONE_NAMESPACE", "resume-v1")
+        "PINECONE_NAMESPACE": config.PINECONE_NAMESPACE
     }
 
 

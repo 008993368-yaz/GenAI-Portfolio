@@ -3,12 +3,13 @@ RAG Retriever Service
 LangChain-based semantic search over resume using Pinecone
 """
 
-import os
 from typing import List, Dict, Any, Optional
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain.embeddings.base import Embeddings
 from langchain.schema import Document
+
+from app.config import config
 
 
 class PineconeInferenceEmbeddings(Embeddings):
@@ -72,10 +73,10 @@ class RetrieverConfig:
     """Configuration for Pinecone retriever"""
     
     def __init__(self):
-        self.api_key = os.getenv("PINECONE_API_KEY")
-        self.index_name = os.getenv("PINECONE_INDEX_NAME")
-        self.namespace = os.getenv("PINECONE_NAMESPACE", "resume-v1")
-        self.embed_model = os.getenv("PINECONE_EMBED_MODEL", "llama-text-embed-v2")
+        self.api_key = config.PINECONE_API_KEY
+        self.index_name = config.PINECONE_INDEX_NAME
+        self.namespace = config.PINECONE_NAMESPACE
+        self.embed_model = config.PINECONE_EMBED_MODEL
         
     def validate(self) -> tuple[bool, Optional[str]]:
         """Validate required environment variables"""

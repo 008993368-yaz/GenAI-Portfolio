@@ -7,15 +7,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
-from dotenv import load_dotenv
 
 from app.services.retriever import retrieve_resume_context
 from app.services.guardrails import is_about_yazhini, get_off_topic_response
 from app.services.memory import get_memory
 from app.services.rag import generate_rag_response, generate_suggested_questions
-
-# Load environment variables
-load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -255,13 +251,13 @@ async def get_suggestions(request: SuggestionsRequest):
 @app.get("/info")
 async def get_info():
     """Get backend configuration info (non-sensitive)"""
-    import os
+    from app.config import config
     
     return {
-        "pinecone_configured": bool(os.getenv("PINECONE_API_KEY")),
-        "index_name": os.getenv("PINECONE_INDEX_NAME", "not_set"),
-        "namespace": os.getenv("PINECONE_NAMESPACE", "resume-v1"),
-        "embed_model": os.getenv("PINECONE_EMBED_MODEL", "llama-text-embed-v2"),
+        "pinecone_configured": bool(config.PINECONE_API_KEY),
+        "index_name": config.PINECONE_INDEX_NAME or "not_set",
+        "namespace": config.PINECONE_NAMESPACE,
+        "embed_model": config.PINECONE_EMBED_MODEL,
     }
 
 
