@@ -12,6 +12,7 @@ from app.services.retriever import retrieve_resume_context
 from app.services.guardrails import is_about_yazhini, get_off_topic_response
 from app.services.memory import get_memory
 from app.services.rag import generate_rag_response, generate_suggested_questions
+from app.config import config
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -23,7 +24,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with specific origins in production
+    allow_origins=config.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

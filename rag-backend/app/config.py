@@ -23,6 +23,17 @@ class Config:
     # RAG Configuration
     RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "5"))
     
+    # CORS Configuration
+    CORS_ORIGINS: str = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3000"
+    )
+    
+    @classmethod
+    def get_cors_origins(cls) -> list[str]:
+        """Parse CORS origins from comma-separated string"""
+        return [origin.strip() for origin in cls.CORS_ORIGINS.split(",") if origin.strip()]
+    
     @classmethod
     def validate_required(cls) -> tuple[bool, Optional[str]]:
         """Validate that required environment variables are set"""
