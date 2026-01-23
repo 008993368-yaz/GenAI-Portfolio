@@ -2,7 +2,7 @@
  * Chat API service for communicating with FastAPI backend
  */
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const SESSION_STORAGE_KEY = 'portfolio_chat_session_id';
 
 /**
