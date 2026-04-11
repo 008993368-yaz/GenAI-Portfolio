@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { sendMessage } from '../services/chatApi';
 import ChatMessage from './ChatMessage';
 import SuggestedQuestions from './SuggestedQuestions';
@@ -30,6 +31,7 @@ const CHAT_STATUS_LABELS = {
 };
 
 const ChatWidget = ({ isOpen, onClose }) => {
+  const reduceMotion = useReducedMotion();
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -257,6 +259,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       isLoading: false,
       onRetry: handleRetryLastMessage,
       retryMessage: null,
+      animationOrder: index,
     }));
   }, [messages, handleRetryLastMessage]);
 
@@ -268,12 +271,16 @@ const ChatWidget = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="chat-widget"
+    <motion.div
+      className="chat-widget ring-1 ring-slate-900/10 shadow-glow"
       role="dialog"
       aria-modal="true"
       aria-labelledby="chat-widget-title"
       ref={widgetRef}
+      initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.96 }}
+      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="chat-header">
         <div className="chat-header-title">
@@ -304,7 +311,15 @@ const ChatWidget = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      <div className="chat-messages" aria-live="polite" aria-relevant="additions text">
+      <motion.div
+        className="chat-messages"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        initial={reduceMotion ? false : { opacity: 0 }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      >
         {messageElements.map((msgProps) => (
           <ChatMessage key={msgProps.key} {...msgProps} />
         ))}
@@ -314,6 +329,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
             role="assistant"
             content="Typing..."
             isLoading={true}
+            animationOrder={messageElements.length}
           />
         )}
 
@@ -323,11 +339,12 @@ const ChatWidget = ({ isOpen, onClose }) => {
             retryMessage={retryMessage}
             isLoading={false}
             onRetry={handleRetryLastMessage}
+            animationOrder={messageElements.length}
           />
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+      </motion.div>
 
       <form className="chat-input-form" onSubmit={handleFormSubmit}>
         <SuggestedQuestions
@@ -368,7 +385,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
         </div>
       </form>
       <div className="sr-only" aria-live="polite">{announcement}</div>
-    </div>
+    </motion.div>
   );
 };
 

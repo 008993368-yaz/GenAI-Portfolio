@@ -1,4 +1,8 @@
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
+
 const Navbar = ({ links, activeSection, onNavClick }) => {
+  const reduceMotion = useReducedMotion();
+
   const handleClick = (e, id) => {
     e.preventDefault();
     onNavClick(id);
@@ -34,21 +38,35 @@ const Navbar = ({ links, activeSection, onNavClick }) => {
 
   return (
     <nav className="floating-nav" aria-label="Primary navigation">
-      <div className="nav-pill" role="menubar">
-        {links.map((link, index) => (
-          <a
-            key={link.id}
-            href={`#${link.id}`}
-            className={`nav-link ${activeSection === link.id ? 'active' : ''}`}
-            onClick={(e) => handleClick(e, link.id)}
-            onKeyDown={(e) => handleKeyDown(e, index)}
-            role="menuitem"
-            aria-current={activeSection === link.id ? 'page' : undefined}
-          >
-            {link.label}
-          </a>
-        ))}
-      </div>
+      <LayoutGroup>
+        <div className="nav-pill relative" role="menubar">
+          {links.map((link, index) => {
+            const isActive = activeSection === link.id;
+
+            return (
+              <a
+                key={link.id}
+                href={`#${link.id}`}
+                className={`nav-link relative z-10 ${isActive ? 'active !bg-transparent !shadow-none text-white' : 'text-slate-700'}`}
+                onClick={(e) => handleClick(e, link.id)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                role="menuitem"
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="nav-active-pill"
+                    className="absolute inset-0 -z-10 rounded-full bg-sky-500/95 shadow-glow"
+                    transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 450, damping: 34 }}
+                    aria-hidden="true"
+                  />
+                )}
+                {link.label}
+              </a>
+            );
+          })}
+        </div>
+      </LayoutGroup>
     </nav>
   );
 };

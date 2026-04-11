@@ -3,8 +3,12 @@ import RevealSection from './RevealSection';
 
 const SkillsSection = ({ skills }) => {
   return (
-    <RevealSection id="skills" title="Skills">
-      <div className="skills-grid">
+    <RevealSection
+      id="skills"
+      title="Skills"
+      className="rounded-3xl bg-white/78 p-6 shadow-glow backdrop-blur-md sm:p-8"
+    >
+      <div className="skills-grid grid gap-5 md:grid-cols-2">
         {skills.map((skill) => (
           <SkillCategory
             key={skill.id}
