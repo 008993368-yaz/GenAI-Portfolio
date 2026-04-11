@@ -1,7 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { sendMessage } from '../services/chatApi';
+import ChatMessage from './ChatMessage';
 import SuggestedQuestions from './SuggestedQuestions';
 
+/**
+ * ChatWidget Component
+ * Main chat interface with optimized rendering using memoization
+ * 
+ * Performance optimizations:
+ * - useCallback: Memoized event handlers to prevent child re-renders
+ * - useMemo: Memoized message elements to avoid recreating on every render
+ * - ChatMessage: Memoized child component prevents unnecessary re-renders
+ */
 const ChatWidget = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
@@ -21,7 +31,12 @@ const ChatWidget = ({ isOpen, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (messageText = null) => {
+  /**
+   * Memoized callback for sending messages
+   * Prevents unnecessary re-creation on every render
+   * Dependencies ensure it updates when needed
+   */
+  const handleSendMessage = useCallback(async (messageText = null) => {
     // Allow passing message text directly (for suggestion clicks)
     const userMessage = (messageText || inputValue).trim();
     
@@ -69,21 +84,64 @@ const ChatWidget = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [inputValue, isLoading]);
 
-  const handleRetryLastMessage = () => {
+  /**
+   * Memoized callback for retrying the last message
+   * Prevents SuggestedQuestions from unnecessary re-renders
+   */
+  const handleRetryLastMessage = useCallback(() => {
     if (!retryMessage || isLoading) return;
     handleSendMessage(retryMessage);
-  };
+  }, [retryMessage, isLoading, handleSendMessage]);
 
-  const handleFormSubmit = (e) => {
+  /**
+   * Memoized callback for form submission
+   * Prevents inline function creation
+   */
+  const handleFormSubmit = useCallback((e) => {
     e.preventDefault();
     handleSendMessage();
-  };
+  }, [handleSendMessage]);
 
-  const handleSuggestionClick = (suggestion) => {
+  /**
+   * Memoized callback for suggestion clicks
+   * Passed to SuggestedQuestions (memoized child) - prevents re-renders
+   */
+  const handleSuggestionClick = useCallback((suggestion) => {
     handleSendMessage(suggestion);
-  };
+  }, [handleSendMessage]);
+
+  /**
+   * Memoized callback for input changes
+   * Prevents SuggestedQuestions from re-rendering on input change
+   */
+  const handleInputChange = useCallback((e) => {
+    setInputValue(e.target.value);
+  }, []);
+
+  /**
+   * Memoized callback for close action
+   */
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  /**
+   * Memoized message list rendering
+   * Avoids recreating message elements on every render
+   * Optimization for chats with many messages
+   */
+  const messageElements = useMemo(() => {
+    return messages.map((msg, index) => ({
+      key: index,
+      role: msg.role,
+      content: msg.content,
+      isLoading: false,
+      onRetry: handleRetryLastMessage,
+      retryMessage: null,
+    }));
+  }, [messages, handleRetryLastMessage]);
 
   if (!isOpen) return null;
 
@@ -97,7 +155,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
         </div>
         <button 
           className="chat-close-button" 
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Close chat"
         >
           ✕
@@ -106,39 +164,28 @@ const ChatWidget = ({ isOpen, onClose }) => {
 
       {/* Messages Area */}
       <div className="chat-messages">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`chat-message ${msg.role === 'user' ? 'chat-message-user' : 'chat-message-assistant'}`}
-          >
-            <div className="chat-message-bubble">
-              {msg.content}
-            </div>
-          </div>
+        {/* Render memoized ChatMessage components */}
+        {messageElements.map((msgProps) => (
+          <ChatMessage key={msgProps.key} {...msgProps} />
         ))}
         
         {/* Loading indicator */}
         {isLoading && (
-          <div className="chat-message chat-message-assistant">
-            <div className="chat-message-bubble chat-typing">
-              Typing...
-            </div>
-          </div>
+          <ChatMessage 
+            role="assistant" 
+            content="Typing..." 
+            isLoading={true}
+          />
         )}
 
+        {/* Retry message (timeout state) */}
         {retryMessage && !isLoading && (
-          <div className="chat-message chat-message-assistant">
-            <div className="chat-message-bubble chat-retry-box">
-              <p className="chat-retry-text">Request timed out.</p>
-              <button
-                type="button"
-                className="chat-retry-button"
-                onClick={handleRetryLastMessage}
-              >
-                Retry last message
-              </button>
-            </div>
-          </div>
+          <ChatMessage
+            role="assistant"
+            retryMessage={retryMessage}
+            isLoading={false}
+            onRetry={handleRetryLastMessage}
+          />
         )}
         
         <div ref={messagesEndRef} />
@@ -146,7 +193,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
 
       {/* Input Area */}
       <form className="chat-input-form" onSubmit={handleFormSubmit}>
-        {/* Suggested Questions */}
+        {/* Suggested Questions - Memoized component receives stable callback */}
         <SuggestedQuestions
           lastUserMessage={lastUserMessage}
           onSuggestionClick={handleSuggestionClick}
@@ -160,7 +207,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
             className="chat-input"
             placeholder="Ask me anything..."
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             disabled={isLoading}
           />
           <button
