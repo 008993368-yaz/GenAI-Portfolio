@@ -1,4 +1,5 @@
 import { useEffect, Suspense, lazy, useRef } from 'react';
+import { motion } from 'framer-motion';
 import HeroSection from './components/HeroSection';
 import Navbar from './components/Navbar';
 import SkillsSection from './components/SkillsSection';
@@ -72,6 +73,30 @@ function App() {
 
   return (
     <>
+      {/* Cinematic animated background layers */}
+      <motion.div
+        className="fixed inset-0 -z-40 bg-gradient-to-br from-slate-900 via-sky-900/40 to-slate-950 pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.2 }}
+      />
+      <motion.div
+        className="fixed inset-0 -z-30 bg-gradient-to-t from-purple-600/5 via-transparent to-transparent pointer-events-none"
+        animate={{
+          background: [
+            'radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)',
+            'radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 50%)',
+            'radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)',
+          ],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Infinity,
+          ease: 'linear',
+        }}
+      />
+
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <Navbar 
         links={navLinks} 

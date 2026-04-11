@@ -1,8 +1,18 @@
+import { motion, useReducedMotion } from 'framer-motion';
+
 const ProjectCard = ({ project }) => {
   const { title, tech, description, highlights, githubUrl, gradient, icon, visual, reverse } = project;
+  const reduceMotion = useReducedMotion();
 
   return (
-    <div className={`project-card ${reverse ? 'reverse' : ''}`}>
+    <motion.article
+      className={`project-card ${reverse ? 'reverse' : ''} rounded-3xl ring-1 ring-white/20 shadow-glow`}
+      initial={{ opacity: 0, y: reduceMotion ? 0 : 22 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={reduceMotion ? undefined : { y: -6, scale: 1.01 }}
+    >
       <div className="project-image" style={{ background: gradient }}>
         <div className="project-image-content">
           <div className="project-icon">{icon}</div>
@@ -15,7 +25,7 @@ const ProjectCard = ({ project }) => {
       </div>
       <div className="project-content">
         <h3 className="project-title">{title}</h3>
-        <span className="project-tech">{tech}</span>
+        <span className="project-tech inline-flex rounded-full bg-slate-900/10 px-3 py-1 text-sm font-semibold tracking-wide text-slate-700">{tech}</span>
         <p className="project-description">{description}</p>
         <ul className="project-highlights">
           {highlights.map((highlight, index) => (
@@ -29,7 +39,7 @@ const ProjectCard = ({ project }) => {
           View on GitHub
         </a>
       </div>
-    </div>
+    </motion.article>
   );
 };
 

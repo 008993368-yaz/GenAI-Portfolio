@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * ChatMessage Component
@@ -12,24 +13,42 @@ const ChatMessage = memo(({
   content, 
   isLoading = false,
   onRetry,
-  retryMessage 
+  retryMessage,
+  animationOrder = 0,
 }) => {
   const isUser = role === 'user';
   const isRetry = retryMessage && !isLoading;
+  const reduceMotion = useReducedMotion();
+
+  const animationDelay = reduceMotion ? 0 : Math.min(animationOrder * 0.03, 0.2);
+  const baseTransition = {
+    duration: reduceMotion ? 0 : 0.3,
+    delay: animationDelay,
+    ease: [0.22, 1, 0.36, 1],
+  };
+  const bubbleInitial = reduceMotion
+    ? false
+    : {
+        opacity: 0,
+        y: 10,
+        x: isUser ? 10 : -10,
+        scale: 0.98,
+      };
+  const bubbleAnimate = { opacity: 1, y: 0, x: 0, scale: 1 };
 
   if (isLoading) {
     return (
-      <div className="chat-message chat-message-assistant">
+      <motion.div className="chat-message chat-message-assistant" initial={bubbleInitial} animate={bubbleAnimate} transition={baseTransition}>
         <div className="chat-message-bubble chat-typing">
           Typing...
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (isRetry) {
     return (
-      <div className="chat-message chat-message-assistant">
+      <motion.div className="chat-message chat-message-assistant" initial={bubbleInitial} animate={bubbleAnimate} transition={baseTransition}>
         <div className="chat-message-bubble chat-retry-box">
           <p className="chat-retry-text">Request timed out.</p>
           <button
@@ -41,16 +60,21 @@ const ChatMessage = memo(({
             Retry last message
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-assistant'}`}>
+    <motion.div
+      className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-assistant'}`}
+      initial={bubbleInitial}
+      animate={bubbleAnimate}
+      transition={baseTransition}
+    >
       <div className="chat-message-bubble">
         {content}
       </div>
-    </div>
+    </motion.div>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison for memo optimization
@@ -59,7 +83,8 @@ const ChatMessage = memo(({
     prevProps.role === nextProps.role &&
     prevProps.content === nextProps.content &&
     prevProps.isLoading === nextProps.isLoading &&
-    prevProps.retryMessage === nextProps.retryMessage
+    prevProps.retryMessage === nextProps.retryMessage &&
+    prevProps.animationOrder === nextProps.animationOrder
   );
 });
 
