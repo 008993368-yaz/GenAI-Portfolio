@@ -59,6 +59,8 @@ export const runStaggerIn = (scope, selector) => {
         duration: 0.8,
         stagger: 0.12,
         ease: 'power3.out',
+        immediateRender: false,
+        clearProps: 'transform,opacity',
         scrollTrigger: {
           trigger: scope.current,
           start: 'top 75%',

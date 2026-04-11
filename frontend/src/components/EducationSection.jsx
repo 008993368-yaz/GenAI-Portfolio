@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 const EducationSection = ({ education }) => (
   <section id="education" className="section education-section">
     <header className="section-header">
-      <p className="section-kicker">Foundation</p>
-      <h2>Education</h2>
+      <p className="section-kicker">Education</p>
     </header>
 
     <div className="education-grid">

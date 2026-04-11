@@ -1,97 +1,111 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { runSkillBars } from '../utils/gsapAnimations';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 
 const makeSkillItems = (content) =>
-  content.split(',').map((item) => {
+  content.split(',').map((item, index) => {
     const label = item.trim();
-    const score = 65 + (label.length % 30);
-    return { label, score };
+    return { label, index };
   });
 
-const SkillsSection = ({ skills }) => {
-  const [openId, setOpenId] = useState(skills[0]?.id);
-  const scopeRef = useRef(null);
+const EXCLUDED_TITLES = new Set(['testing', 'bi & automation']);
 
-  const groups = useMemo(
-    () =>
-      skills.map((group) => ({
+const SkillsSection = ({ skills }) => {
+  const groups = useMemo(() => {
+    return skills
+      .filter((group) => !EXCLUDED_TITLES.has(group.title.trim().toLowerCase()))
+      .map((group) => ({
         ...group,
         items: makeSkillItems(group.content),
-      })),
-    [skills]
-  );
+      }));
+  }, [skills]);
 
-  useEffect(() => runSkillBars(scopeRef), [groups]);
+  const [activeId, setActiveId] = useState(groups[0]?.id ?? null);
+
+  useEffect(() => {
+    if (!groups.length) {
+      setActiveId(null);
+      return;
+    }
+
+    const activeExists = groups.some((group) => group.id === activeId);
+    if (!activeExists) {
+      setActiveId(groups[0].id);
+    }
+  }, [activeId, groups]);
+
+  const activeGroup = groups.find((group) => group.id === activeId) ?? groups[0];
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.85 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.4, ease: 'easeOut' },
+    },
+  };
 
   return (
-    <section id="skills" className="section skills-section" ref={scopeRef}>
+    <section id="skills" className="section skills-section">
       <header className="section-header">
-        <p className="section-kicker">Capabilities</p>
-        <h2>Skills & Toolkit</h2>
+        <p className="section-kicker">Skills</p>
       </header>
 
-      <div className="skills-accordion">
-        {groups.map((group, index) => {
-          const isOpen = openId === group.id;
-
-          return (
-            <article key={group.id} className="skill-group">
+      <div className="skills-tabs-shell">
+        <div className="skills-tabs" role="tablist" aria-label="Skill categories">
+          {groups.map((group) => {
+            const isActive = group.id === activeGroup?.id;
+            return (
               <button
+                key={group.id}
+                id={`skills-tab-${group.id}`}
                 type="button"
-                className="skill-group__trigger magnetic"
-                aria-expanded={isOpen}
-                onClick={() => setOpenId(isOpen ? null : group.id)}
+                role="tab"
+                className={`skills-tab ${isActive ? 'is-active' : ''}`}
+                aria-selected={isActive}
+                aria-controls={`skills-panel-${group.id}`}
+                onClick={() => setActiveId(group.id)}
               >
-                <span>{group.title}</span>
-                <span>{isOpen ? '−' : '+'}</span>
+                {group.title}
               </button>
+            );
+          })}
+        </div>
 
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    className="skill-group__panel"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.35 }}
-                  >
-                    <div className="skill-icon-grid">
-                      {group.items.map((skill) => (
-                        <motion.div
-                          key={skill.label}
-                          className="skill-icon"
-                          initial={{ opacity: 0, y: 14 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 0.3, delay: index * 0.04 }}
-                          title={`${skill.label}: ${skill.score}%`}
-                        >
-                          <span>{skill.label.slice(0, 2).toUpperCase()}</span>
-                          <small>{skill.score}%</small>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    <div className="skill-bars">
-                      {group.items.map((skill) => (
-                        <div key={skill.label} className="skill-bar-row">
-                          <div className="skill-bar-row__label">
-                            <span>{skill.label}</span>
-                            <span>{skill.score}%</span>
-                          </div>
-                          <div className="skill-track">
-                            <div className="skill-fill" data-width={`${skill.score}%`} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </article>
-          );
-        })}
+        {activeGroup && (
+          <motion.section
+            key={activeGroup.id}
+            id={`skills-panel-${activeGroup.id}`}
+            role="tabpanel"
+            aria-labelledby={`skills-tab-${activeGroup.id}`}
+            className="skills-tab-panel"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+          >
+            <motion.ul
+              className="skills-pill-grid"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.04, delayChildren: 0.06 },
+                },
+              }}
+              initial="hidden"
+              animate="visible"
+            >
+              {activeGroup.items.map((skill) => (
+                <motion.li
+                  key={skill.label}
+                  className="skills-pill"
+                  variants={itemVariants}
+                >
+                  {skill.label}
+                </motion.li>
+              ))}
+            </motion.ul>
+          </motion.section>
+        )}
       </div>
     </section>
   );

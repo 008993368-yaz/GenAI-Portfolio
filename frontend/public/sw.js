@@ -1,5 +1,5 @@
 /* Basic service worker for offline support and static asset caching */
-const CACHE_NAME = "portfolio-static-v1";
+const CACHE_NAME = "portfolio-static-v2";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
@@ -37,6 +37,22 @@ self.addEventListener("fetch", (event) => {
         });
         throw error;
       })
+    );
+    return;
+  }
+
+  // Network-first for navigation requests so refreshes always pick up the latest app shell.
+  if (request.mode === "navigate" || request.destination === "document") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put("/index.html", copy);
+          });
+          return response;
+        })
+        .catch(() => caches.match("/index.html"))
     );
     return;
   }

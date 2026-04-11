@@ -1,42 +1,36 @@
 import { useState } from 'react';
-import { motion, useTransform } from 'framer-motion';
-import { useScrollProgress } from '../hooks/useScrollProgress';
+import { motion } from 'framer-motion';
 
 const ExperienceSection = ({ experience }) => {
   const [expandedCard, setExpandedCard] = useState(null);
-  const { ref, progress } = useScrollProgress();
-  const scaleY = useTransform(progress, [0, 1], [0, 1]);
 
   return (
-    <section id="experience" className="section experience-section" ref={ref}>
+    <section id="experience" className="section experience-section">
       <header className="section-header">
-        <p className="section-kicker">Journey</p>
-        <h2>Experience Timeline</h2>
+        <p className="section-kicker">Experience</p>
       </header>
 
-      <div className="timeline-wrap">
-        <motion.div className="timeline-progress" style={{ scaleY }} />
-
-        {experience.map((role, index) => {
+      <div className="experience-grid">
+        {experience.map((role) => {
           const isExpanded = expandedCard === role.id;
 
           return (
             <motion.article
               key={role.id}
-              className={`timeline-card ${index % 2 === 0 ? 'left' : 'right'}`}
-              initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              className="experience-card"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.45 }}
             >
-              <div className="timeline-card__top">
+              <div className="experience-card__header">
                 <h3>{role.title}</h3>
                 <p>{role.company}</p>
                 <small>{role.duration}</small>
               </div>
 
               <button
-                className="timeline-card__toggle magnetic"
+                className="experience-card__toggle magnetic"
                 type="button"
                 onClick={() => setExpandedCard(isExpanded ? null : role.id)}
                 aria-expanded={isExpanded}
@@ -45,21 +39,19 @@ const ExperienceSection = ({ experience }) => {
               </button>
 
               <motion.div
-                className="timeline-card__body"
+                className="experience-card__body"
                 initial={false}
                 animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.32 }}
               >
                 {role.capabilities?.map((capability) => (
-                  <div key={capability.title} className="timeline-capability">
+                  <div key={capability.title} className="experience-card__capability">
                     <h4>{capability.title}</h4>
-                    <div className="timeline-pills">
+                    <ul className="experience-list">
                       {capability.achievements?.map((item) => (
-                        <span className="timeline-pill" key={item.slice(0, 24)}>
-                          {item}
-                        </span>
+                        <li key={item.slice(0, 24)}>{item}</li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 ))}
               </motion.div>

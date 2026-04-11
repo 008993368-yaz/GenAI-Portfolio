@@ -1,7 +1,6 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProjectCard from './ProjectCard';
-import { runStaggerIn } from '../../utils/gsapAnimations';
 
 const ProjectModal = lazy(() => import('./ProjectModal'));
 
@@ -10,7 +9,6 @@ const normalizeFilter = (tech) => tech?.split(',')[0]?.trim() || 'Other';
 const ProjectGrid = ({ projects }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeProject, setActiveProject] = useState(null);
-  const scopeRef = useRef(null);
 
   const filters = useMemo(() => ['All', ...new Set(projects.map((project) => normalizeFilter(project.tech)))], [projects]);
 
@@ -21,13 +19,18 @@ const ProjectGrid = ({ projects }) => {
     return projects.filter((project) => normalizeFilter(project.tech) === activeFilter);
   }, [activeFilter, projects]);
 
-  useEffect(() => runStaggerIn(scopeRef, '.project-card'), [filteredProjects]);
+  useEffect(() => {
+    // Clear any stale inline styles left by previous animation runs.
+    document.querySelectorAll('#projects .project-card').forEach((node) => {
+      node.style.removeProperty('opacity');
+      node.style.removeProperty('transform');
+    });
+  }, [filteredProjects]);
 
   return (
-    <section id="projects" className="section projects-section" ref={scopeRef}>
+    <section id="projects" className="section projects-section">
       <header className="section-header">
-        <p className="section-kicker">Build</p>
-        <h2>Selected Projects</h2>
+        <p className="section-kicker">Projects</p>
       </header>
 
       <div className="filter-pills" role="tablist" aria-label="Project filters">
