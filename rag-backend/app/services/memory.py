@@ -78,7 +78,13 @@ class SessionMemory:
         if memory is None:
             memory = self._create_memory()
             self._sessions[session_id] = memory
-            logger.info("Created new session memory: %s", session_id)
+            logger.info(
+                "Session created: id=%s, total_active_sessions=%d",
+                session_id,
+                len(self._sessions),
+            )
+        else:
+            logger.debug("Session accessed: id=%s", session_id)
 
         self._touch_session(session_id)
         return memory
@@ -86,15 +92,23 @@ class SessionMemory:
     def _cleanup_loop(self) -> None:
         while not self._stop_event.wait(self._cleanup_interval_seconds):
             removed_count = self.cleanup_expired_sessions()
+            self._cleanup_runs += 1
             if removed_count > 0:
                 logger.info(
-                    "Session cleanup removed %s expired session(s); active_sessions=%s, total_cleaned=%s",
+                    "Cleanup sweep: removed=%d, active_sessions=%d, total_cleanup_runs=%d",
                     removed_count,
                     self.get_session_count(),
-                    self.get_cleanup_count(),
+                    self._cleanup_runs,
+                )
+            else:
+                logger.debug(
+                    "Cleanup sweep: no expired sessions (active=%d, total_runs=%d)",
+                    self.get_session_count(),
+                    self._cleanup_runs,
                 )
 
     def cleanup_expired_sessions(self) -> int:
+        """Remove sessions that exceed the TTL threshold."""
         now = time.time()
 
         with self._lock:
