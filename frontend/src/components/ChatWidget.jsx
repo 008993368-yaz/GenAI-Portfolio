@@ -100,6 +100,12 @@ const ChatWidget = ({ isOpen, onClose }) => {
 
   const mapErrorToUi = useCallback((error) => {
     switch (error?.code) {
+      case 'OFFLINE':
+        return {
+          type: 'OFFLINE',
+          message: 'You are offline. Reconnect to send messages.',
+          retryable: true,
+        };
       case 'TIMEOUT':
         return {
           type: 'TIMEOUT',

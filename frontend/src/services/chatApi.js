@@ -6,6 +6,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 const SESSION_STORAGE_KEY = 'portfolio_chat_session_id';
 const REQUEST_TIMEOUT_MS = 30_000;
 
+function ensureOnline() {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw buildApiError(
+      'You are currently offline. Please reconnect and try again.',
+      'OFFLINE'
+    );
+  }
+}
+
 function buildApiError(message, code, status = null) {
   const error = new Error(message);
   error.code = code;
@@ -57,6 +66,8 @@ export async function sendMessage(message) {
   const sessionId = getSessionId();
 
   try {
+    ensureOnline();
+
     const response = await fetchWithTimeout(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
@@ -81,7 +92,12 @@ export async function sendMessage(message) {
   } catch (error) {
     console.error('Chat API error:', error);
 
-    if (error?.code === 'TIMEOUT' || error?.code === 'NETWORK_ERROR' || error?.code === 'HTTP_ERROR') {
+    if (
+      error?.code === 'OFFLINE' ||
+      error?.code === 'TIMEOUT' ||
+      error?.code === 'NETWORK_ERROR' ||
+      error?.code === 'HTTP_ERROR'
+    ) {
       throw error;
     }
 
@@ -94,6 +110,8 @@ export async function sendMessage(message) {
 
 export async function fetchSuggestions(payload = {}) {
   try {
+    ensureOnline();
+
     const response = await fetchWithTimeout(`${API_BASE_URL}/suggestions`, {
       method: 'POST',
       headers: {
@@ -118,7 +136,12 @@ export async function fetchSuggestions(payload = {}) {
   } catch (error) {
     console.error('Suggestions API error:', error);
 
-    if (error?.code === 'TIMEOUT' || error?.code === 'NETWORK_ERROR' || error?.code === 'HTTP_ERROR') {
+    if (
+      error?.code === 'OFFLINE' ||
+      error?.code === 'TIMEOUT' ||
+      error?.code === 'NETWORK_ERROR' ||
+      error?.code === 'HTTP_ERROR'
+    ) {
       throw error;
     }
 
