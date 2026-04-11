@@ -1,8 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useId } from 'react';
 
 const Accordion = ({ title, items, isOpen, onToggle }) => {
   const contentRef = useRef(null);
   const contentWrapperRef = useRef(null);
+  const accordionId = useId();
+  const buttonId = `${accordionId}-button`;
+  const panelId = `${accordionId}-panel`;
 
   useEffect(() => {
     if (contentRef.current) {
@@ -21,6 +24,8 @@ const Accordion = ({ title, items, isOpen, onToggle }) => {
         className={`accordion-header ${isOpen ? 'active' : ''}`}
         onClick={onToggle}
         aria-expanded={isOpen}
+        aria-controls={panelId}
+        id={buttonId}
       >
         <span className="accordion-title">{title}</span>
         <span className={`accordion-icon ${isOpen ? 'open' : ''}`}>
@@ -30,6 +35,10 @@ const Accordion = ({ title, items, isOpen, onToggle }) => {
       <div 
         ref={contentWrapperRef}
         className="accordion-content-wrapper"
+        id={panelId}
+        role="region"
+        aria-labelledby={buttonId}
+        hidden={!isOpen}
       >
         <div 
           ref={contentRef}

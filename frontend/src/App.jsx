@@ -81,6 +81,7 @@ function App() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <Navbar 
         links={navLinks} 
         activeSection={activeSection} 
@@ -90,7 +91,7 @@ function App() {
         personalInfo={portfolioData.personalInfo}
         onNavClick={handleNavClick}
       />
-      <main className="main">
+      <main id="main-content" className="main" tabIndex={-1}>
         <div className="container">
           <SkillsSection skills={portfolioData.skills} />
           <ExperienceSection experience={portfolioData.experience} />

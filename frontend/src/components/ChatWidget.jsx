@@ -25,11 +25,52 @@ const ChatWidget = ({ isOpen, onClose }) => {
   const [chatStatus, setChatStatus] = useState(CHAT_STATUS.IDLE);
   const [chatError, setChatError] = useState(null);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [announcement, setAnnouncement] = useState('');
   const messagesEndRef = useRef(null);
+  const widgetRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleDialogKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+
+      if (e.key !== 'Tab' || !widgetRef.current) return;
+
+      const focusable = widgetRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => document.removeEventListener('keydown', handleDialogKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -133,6 +174,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setRetryMessage(null);
       setRefreshSuggestions((prev) => prev + 1);
       setChatStatus(CHAT_STATUS.SUCCESS);
+      setAnnouncement('Assistant response received.');
     } catch (error) {
       const uiError = mapErrorToUi(error);
       if (uiError.retryable) {
@@ -149,6 +191,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
           content: uiError.message,
         },
       ]);
+      setAnnouncement(`Error: ${uiError.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -203,11 +246,17 @@ const ChatWidget = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="chat-widget">
+    <div
+      className="chat-widget"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chat-widget-title"
+      ref={widgetRef}
+    >
       <div className="chat-header">
         <div className="chat-header-title">
           <span className="chat-header-icon">AI</span>
-          <span className="chat-header-text">Yazhini AI</span>
+          <span className="chat-header-text" id="chat-widget-title">Yazhini AI</span>
         </div>
         <button
           className="chat-close-button"
@@ -234,7 +283,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      <div className="chat-messages">
+      <div className="chat-messages" aria-live="polite" aria-relevant="additions text">
         {messageElements.map((msgProps) => (
           <ChatMessage key={msgProps.key} {...msgProps} />
         ))}
@@ -276,6 +325,8 @@ const ChatWidget = ({ isOpen, onClose }) => {
             value={inputValue}
             onChange={handleInputChange}
             disabled={isLoading || !isOnline}
+            aria-label="Message input"
+            ref={inputRef}
           />
           <button
             type="submit"
@@ -295,6 +346,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
           </button>
         </div>
       </form>
+      <div className="sr-only" aria-live="polite">{announcement}</div>
     </div>
   );
 };
