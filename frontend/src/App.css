@@ -1397,3 +1397,122 @@ body {
         padding: 10px 14px;
     }
 }
+
+/* Error Boundary Fallback */
+.error-boundary-fallback {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+}
+
+.error-content {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(231, 76, 60, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 11px;
+    text-align: center;
+    padding: 8px;
+    gap: 4px;
+}
+
+.error-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--white);
+}
+
+.error-message {
+    display: none;
+}
+
+.error-retry-btn {
+    display: none;
+}
+
+.error-content:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px rgba(231, 76, 60, 0.6);
+}
+
+/* Chatbot Skeleton Loading State */
+.chatbot-skeleton-wrapper {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+    animation: fadeInLoading 0.3s ease-in-out;
+}
+
+@keyframes fadeInLoading {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.chatbot-skeleton-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@media (max-width: 768px) {
+    .error-boundary-fallback {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .chatbot-skeleton-wrapper {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .chatbot-skeleton-button {
+        width: 50px;
+        height: 50px;
+    }
+}
