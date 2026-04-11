@@ -13,6 +13,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastUserMessage, setLastUserMessage] = useState(null);
   const [refreshSuggestions, setRefreshSuggestions] = useState(0);
+  const [retryMessage, setRetryMessage] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -34,6 +35,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
     // Add user message to chat
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setLastUserMessage(userMessage);
+    setRetryMessage(null);
     setIsLoading(true);
 
     try {
@@ -42,21 +44,36 @@ const ChatWidget = ({ isOpen, onClose }) => {
       
       // Add assistant reply
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      setRetryMessage(null);
       
       // Refresh suggestions after assistant responds
       setRefreshSuggestions((prev) => prev + 1);
     } catch (error) {
+      const isTimeout = error?.code === 'TIMEOUT';
+      const fallbackMessage = isTimeout
+        ? 'The request timed out after 30 seconds. You can retry your last message.'
+        : "Sorry - I'm having trouble connecting right now. Please try again.";
+
+      if (isTimeout) {
+        setRetryMessage(userMessage);
+      }
+
       // Add error message
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: "Sorry — I'm having trouble connecting right now. Please try again.",
+          content: error?.message || fallbackMessage,
         },
       ]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetryLastMessage = () => {
+    if (!retryMessage || isLoading) return;
+    handleSendMessage(retryMessage);
   };
 
   const handleFormSubmit = (e) => {
@@ -105,6 +122,21 @@ const ChatWidget = ({ isOpen, onClose }) => {
           <div className="chat-message chat-message-assistant">
             <div className="chat-message-bubble chat-typing">
               Typing...
+            </div>
+          </div>
+        )}
+
+        {retryMessage && !isLoading && (
+          <div className="chat-message chat-message-assistant">
+            <div className="chat-message-bubble chat-retry-box">
+              <p className="chat-retry-text">Request timed out.</p>
+              <button
+                type="button"
+                className="chat-retry-button"
+                onClick={handleRetryLastMessage}
+              >
+                Retry last message
+              </button>
             </div>
           </div>
         )}
