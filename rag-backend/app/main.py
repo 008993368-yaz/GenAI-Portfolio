@@ -3,10 +3,18 @@ FastAPI RAG Backend
 Portfolio chatbot backend with resume retrieval
 """
 
-from fastapi import FastAPI, HTTPException
+import logging
+import time
+
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from starlette.responses import JSONResponse
 
 from app.services.retriever import retrieve_resume_context
 from app.services.guardrails import is_about_yazhini, get_off_topic_response
@@ -14,12 +22,49 @@ from app.services.memory import get_memory
 from app.services.rag import generate_rag_response, generate_suggested_questions
 from app.config import Config
 
+
+def configure_logging() -> logging.Logger:
+    """Configure structured logging to console and file."""
+    logger = logging.getLogger("portfolio_rag_backend")
+
+    if logger.handlers:
+        return logger
+
+    logger.setLevel(getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO))
+
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    file_handler = logging.FileHandler(Config.LOG_FILE)
+    file_handler.setFormatter(formatter)
+
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+    logger.propagate = False
+
+    return logger
+
+
+logger = configure_logging()
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Portfolio RAG Backend",
     description="Semantic search over resume using Pinecone + LLaMA embeddings",
     version="1.0.0"
 )
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[Config.RATE_LIMIT_DEFAULT],
+    headers_enabled=True,
+    enabled=Config.RATE_LIMIT_ENABLED,
+)
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -29,6 +74,62 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    """Return a 429 response with rate limit headers."""
+    response = JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "error": "Rate limit exceeded",
+            "detail": str(exc.detail),
+        },
+    )
+
+    current_limit = getattr(request.state, "view_rate_limit", None)
+    if current_limit is not None:
+        response = request.app.state.limiter._inject_headers(response, current_limit)
+    else:
+        response.headers["Retry-After"] = str(Config.RATE_LIMIT_RETRY_AFTER_SECONDS)
+
+    logger.warning(
+        "Rate limit exceeded for %s %s from %s",
+        request.method,
+        request.url.path,
+        request.client.host if request.client else "unknown",
+    )
+    return response
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log request timing and final status for every API call."""
+    start_time = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.exception(
+            "Unhandled error for %s %s after %.2f ms",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+        )
+        raise
+
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+    logger.info(
+        "%s %s -> %s in %.2f ms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
 
 
 # Pydantic models
@@ -86,7 +187,8 @@ async def root():
 
 # Chat endpoint - main RAG pipeline
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@limiter.limit(Config.CHAT_RATE_LIMIT)
+async def chat(request: Request, payload: ChatRequest):
     """
     Chat with Yazhini's portfolio assistant
     
@@ -111,30 +213,30 @@ async def chat(request: ChatRequest):
         memory = get_memory()
         
         # Guardrail check - is this about Yazhini?
-        if not is_about_yazhini(request.message):
+        if not is_about_yazhini(payload.message):
             # Off-topic - return redirect without calling Pinecone/OpenAI
             off_topic_reply = get_off_topic_response()
             
             # Still store in memory for context
-            memory.add_message(request.sessionId, "user", request.message)
-            memory.add_message(request.sessionId, "assistant", off_topic_reply)
+            memory.add_message(payload.sessionId, "user", payload.message)
+            memory.add_message(payload.sessionId, "assistant", off_topic_reply)
             
             return ChatResponse(reply=off_topic_reply)
         
         # On-topic - proceed with RAG pipeline
         
         # Get conversation history for context
-        conversation_history = memory.get_history_for_llm(request.sessionId)
+        conversation_history = memory.get_history_for_llm(payload.sessionId)
         
         # Generate response using RAG
         reply = generate_rag_response(
-            query=request.message,
+            query=payload.message,
             conversation_history=conversation_history
         )
         
         # Store in memory
-        memory.add_message(request.sessionId, "user", request.message)
-        memory.add_message(request.sessionId, "assistant", reply)
+        memory.add_message(payload.sessionId, "user", payload.message)
+        memory.add_message(payload.sessionId, "assistant", reply)
         
         return ChatResponse(reply=reply)
         
@@ -210,7 +312,8 @@ async def search_resume(request: SearchRequest):
 
 # Suggestions endpoint
 @app.post("/suggestions", response_model=SuggestionsResponse)
-async def get_suggestions(request: SuggestionsRequest):
+@limiter.limit(Config.SUGGESTIONS_RATE_LIMIT)
+async def get_suggestions(request: Request, payload: SuggestionsRequest):
     """
     Generate suggested questions for the chatbot
     
@@ -229,8 +332,8 @@ async def get_suggestions(request: SuggestionsRequest):
     try:
         # Generate suggestions using RAG service
         suggestions = generate_suggested_questions(
-            last_user_message=request.last_user_message,
-            conversation_summary=request.conversation_summary
+            last_user_message=payload.last_user_message,
+            conversation_summary=payload.conversation_summary
         )
         
         return SuggestionsResponse(suggestions=suggestions)

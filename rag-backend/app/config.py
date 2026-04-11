@@ -22,6 +22,17 @@ class Config:
     
     # RAG Configuration
     RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "5"))
+
+    # Rate limiting configuration
+    RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+    RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
+    CHAT_RATE_LIMIT: str = os.getenv("CHAT_RATE_LIMIT", "10/minute")
+    SUGGESTIONS_RATE_LIMIT: str = os.getenv("SUGGESTIONS_RATE_LIMIT", "20/minute")
+    RATE_LIMIT_RETRY_AFTER_SECONDS: int = int(os.getenv("RATE_LIMIT_RETRY_AFTER_SECONDS", "60"))
+
+    # Logging configuration
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FILE: str = os.getenv("LOG_FILE", "rag-backend.log")
     
     # CORS Configuration
     CORS_ORIGINS: str = os.getenv(
