@@ -3,6 +3,8 @@ import { sendMessage } from '../services/chatApi';
 import ChatMessage from './ChatMessage';
 import SuggestedQuestions from './SuggestedQuestions';
 import {
+  CHAT_GREETING_MESSAGE,
+  CHAT_OFFLINE_MESSAGE,
   HTTP_STATUS_SERVER_ERROR,
   HTTP_STATUS_UNKNOWN,
   HTTP_STATUS_TOO_MANY_REQUESTS,
@@ -27,13 +29,11 @@ const CHAT_STATUS_LABELS = {
   [CHAT_STATUS.SUCCESS]: 'Connected',
 };
 
-const OFFLINE_CHAT_MESSAGE = 'You are offline. Reconnect to send messages.';
-
 const ChatWidget = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi, I am Yazhini. Ask me about my projects, skills, or experience.",
+      content: CHAT_GREETING_MESSAGE,
     },
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -103,7 +103,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setChatStatus(CHAT_STATUS.ERROR);
       setChatError({
         type: 'OFFLINE',
-        message: OFFLINE_CHAT_MESSAGE,
+        message: CHAT_OFFLINE_MESSAGE,
         retryable: true,
       });
     };
@@ -122,7 +122,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       case 'OFFLINE':
         return {
           type: 'OFFLINE',
-          message: 'You are offline. Reconnect to send messages.',
+          message: CHAT_OFFLINE_MESSAGE,
           retryable: true,
         };
       case 'TIMEOUT':
@@ -175,7 +175,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setChatStatus(CHAT_STATUS.ERROR);
       setChatError({
         type: 'OFFLINE',
-        message: OFFLINE_CHAT_MESSAGE,
+        message: CHAT_OFFLINE_MESSAGE,
         retryable: true,
       });
       setRetryMessage(userMessage);
@@ -277,8 +277,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
     >
       <div className="chat-header">
         <div className="chat-header-title">
-          <span className="chat-header-icon">AI</span>
-          <span className="chat-header-text" id="chat-widget-title">Yazhini AI</span>
+          <span className="chat-header-text" id="chat-widget-title">Yazhini AI Assistant</span>
         </div>
         <button
           className="chat-close-button"

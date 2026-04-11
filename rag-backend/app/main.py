@@ -22,9 +22,8 @@ from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
 
 from app.services.retriever import retrieve_resume_context
-from app.services.guardrails import is_about_yazhini, get_off_topic_response
-from app.services.memory import get_memory
-from app.services.rag import generate_rag_response, generate_suggested_questions
+from app.services.chat_orchestrator import generate_chat_reply
+from app.services.rag import generate_suggested_questions
 from app.config import Config
 
 
@@ -423,37 +422,9 @@ async def chat(request: Request, payload: ChatRequest):
         HTTPException: If RAG pipeline fails
     """
     try:
-        # Get session memory
-        memory = get_memory()
-        
-        # Guardrail check - is this about Yazhini?
-        if not is_about_yazhini(payload.message):
-            # Off-topic - return redirect without calling Pinecone/OpenAI
-            off_topic_reply = get_off_topic_response()
-            
-            # Still store in memory for context
-            memory.add_message(payload.sessionId, "user", payload.message)
-            memory.add_message(payload.sessionId, "assistant", off_topic_reply)
-            
-            return ChatResponse(reply=off_topic_reply)
-        
-        # On-topic - proceed with RAG pipeline
-        
-        # Get conversation history for context
-        conversation_history = memory.get_history_for_llm(payload.sessionId)
-        
-        # Generate response using RAG
-        reply = generate_rag_response(
-            query=payload.message,
-            conversation_history=conversation_history
-        )
-        
-        # Store in memory
-        memory.add_message(payload.sessionId, "user", payload.message)
-        memory.add_message(payload.sessionId, "assistant", reply)
-        
+        reply = generate_chat_reply(payload.sessionId, payload.message)
         return ChatResponse(reply=reply)
-        
+
     except ValueError as e:
         # Configuration error
         ERROR_COUNT.labels(endpoint="/chat", error_type="configuration_error").inc()

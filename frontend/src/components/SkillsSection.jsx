@@ -1,16 +1,9 @@
-import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import SkillCategory from './SkillCategory';
+import RevealSection from './RevealSection';
 
 const SkillsSection = ({ skills }) => {
-  const { ref, isVisible } = useIntersectionObserver();
-
   return (
-    <section id="skills" className={`section ${isVisible ? 'visible' : 'fade-in'}`} ref={ref} style={{
-      opacity: isVisible ? 1 : 0,
-      transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-      transition: 'opacity 0.6s ease, transform 0.6s ease'
-    }}>
-      <h2 className="section-title">Skills</h2>
+    <RevealSection id="skills" title="Skills">
       <div className="skills-grid">
         {skills.map((skill) => (
           <SkillCategory
@@ -20,7 +13,7 @@ const SkillsSection = ({ skills }) => {
           />
         ))}
       </div>
-    </section>
+    </RevealSection>
   );
 };
 

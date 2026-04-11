@@ -54,6 +54,19 @@ def _is_retryable_openai_exception(exc: BaseException) -> bool:
     return any(marker in error_text for marker in retry_markers)
 
 
+RETRY_POLICY = retry(
+    reraise=True,
+    stop=stop_after_attempt(config.DEFAULT_RAG_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=config.DEFAULT_RAG_RETRY_WAIT_MULTIPLIER,
+        min=config.DEFAULT_RAG_RETRY_WAIT_MIN_SECONDS,
+        max=config.DEFAULT_RAG_RETRY_WAIT_MAX_SECONDS,
+    ),
+    retry=retry_if_exception(_is_retryable_openai_exception),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+
+
 class SuggestedQuestions(BaseModel):
     """Schema for suggested questions output"""
     questions: List[str] = Field(description=f"List of {config.DEFAULT_RAG_SUGGESTION_COUNT} suggested questions")
@@ -145,37 +158,61 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         )
         
         # Create retrieval chain
-        self.retrieval_chain = create_retrieval_chain(
-            retriever=self.retriever,
+        self.retrieval_chain = self._build_retrieval_chain(self.retriever)
+
+    def _build_retrieval_chain(self, retriever):
+        return create_retrieval_chain(
+            retriever=retriever,
             combine_docs_chain=self.document_chain
         )
 
-    @retry(
-        reraise=True,
-        stop=stop_after_attempt(config.DEFAULT_RAG_RETRY_ATTEMPTS),
-        wait=wait_exponential(
-            multiplier=config.DEFAULT_RAG_RETRY_WAIT_MULTIPLIER,
-            min=config.DEFAULT_RAG_RETRY_WAIT_MIN_SECONDS,
-            max=config.DEFAULT_RAG_RETRY_WAIT_MAX_SECONDS,
-        ),
-        retry=retry_if_exception(_is_retryable_openai_exception),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
+    @staticmethod
+    def _convert_chat_history(conversation_history: Optional[List[Dict]]) -> List:
+        chat_history = []
+        if not conversation_history:
+            return chat_history
+
+        for message in conversation_history:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "user":
+                chat_history.append(HumanMessage(content=content))
+            elif role == "assistant":
+                chat_history.append(AIMessage(content=content))
+        return chat_history
+
+    @staticmethod
+    def _normalize_suggested_questions(questions: Any) -> List[str]:
+        if isinstance(questions, dict) and "questions" in questions:
+            candidate_questions = questions["questions"]
+        elif isinstance(questions, list):
+            candidate_questions = questions
+        else:
+            return []
+
+        cleaned_questions = []
+        for question in candidate_questions[:config.DEFAULT_RAG_SUGGESTION_COUNT]:
+            if not isinstance(question, str):
+                continue
+
+            normalized_question = question.strip()
+            normalized_question = normalized_question.lstrip("-• ")
+            if normalized_question and normalized_question[0].isdigit():
+                import re
+                normalized_question = re.sub(r"^\d+[\.\)]\s*", "", normalized_question)
+
+            word_count = len(normalized_question.split())
+            if config.DEFAULT_SUGGESTION_WORD_COUNT_MIN <= word_count <= config.DEFAULT_SUGGESTION_WORD_COUNT_MAX:
+                cleaned_questions.append(normalized_question)
+
+        return cleaned_questions
+
+    @RETRY_POLICY
     def _invoke_retrieval_chain_with_retry(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke RAG chain with retries for transient OpenAI failures."""
         return self.retrieval_chain.invoke(payload)
 
-    @retry(
-        reraise=True,
-        stop=stop_after_attempt(config.DEFAULT_RAG_RETRY_ATTEMPTS),
-        wait=wait_exponential(
-            multiplier=config.DEFAULT_RAG_RETRY_WAIT_MULTIPLIER,
-            min=config.DEFAULT_RAG_RETRY_WAIT_MIN_SECONDS,
-            max=config.DEFAULT_RAG_RETRY_WAIT_MAX_SECONDS,
-        ),
-        retry=retry_if_exception(_is_retryable_openai_exception),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
+    @RETRY_POLICY
     def _invoke_suggestion_chain_with_retry(self, chain, payload: Dict[str, Any]):
         """Invoke suggestion generation chain with retries for transient OpenAI failures."""
         return chain.invoke(payload)
@@ -207,19 +244,10 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         if top_k is not None and top_k != self.config.rag_top_k:
             logger.debug("[%s] Updating retriever top_k from %d to %d", req_id, self.config.rag_top_k, top_k)
             self.retriever = self.retriever_instance.get_retriever(k=top_k)
-            self.retrieval_chain = create_retrieval_chain(
-                retriever=self.retriever,
-                combine_docs_chain=self.document_chain
-            )
+            self.retrieval_chain = self._build_retrieval_chain(self.retriever)
         
         # Convert conversation history to LangChain message format
-        chat_history = []
-        if conversation_history:
-            for msg in conversation_history:
-                if msg['role'] == 'user':
-                    chat_history.append(HumanMessage(content=msg['content']))
-                elif msg['role'] == 'assistant':
-                    chat_history.append(AIMessage(content=msg['content']))
+        chat_history = self._convert_chat_history(conversation_history)
         logger.debug("[%s] Converted %d messages to LangChain format", req_id, len(chat_history))
         
         # Invoke the retrieval chain
@@ -269,7 +297,6 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         Returns:
             List of suggested questions
         """
-        import re
         import time
 
         req_id = request_id or "N/A"
@@ -324,25 +351,10 @@ Generate the {config.DEFAULT_RAG_SUGGESTION_COUNT} questions now:""",
             gen_ms = (time.perf_counter() - gen_start) * 1000
             logger.info("[%s] Suggestion generation completed in %.2f ms", req_id, gen_ms)
 
-            if isinstance(result, dict) and "questions" in result:
-                questions = result["questions"]
-            elif isinstance(result, list):
-                questions = result
-            else:
-                logger.warning("[%s] Unexpected suggestion format, returning fallback", req_id)
-                return fallback
+            cleaned = self._normalize_suggested_questions(result)
+            candidate_count = len(result["questions"]) if isinstance(result, dict) and isinstance(result.get("questions"), list) else len(result) if isinstance(result, list) else 0
 
-            cleaned = []
-            for q in questions[:config.DEFAULT_RAG_SUGGESTION_COUNT]:
-                if isinstance(q, str):
-                    word_count = len(q.split())
-                    if config.DEFAULT_SUGGESTION_WORD_COUNT_MIN <= word_count <= config.DEFAULT_SUGGESTION_WORD_COUNT_MAX:
-                        q = re.sub(r'^\d+[\.\)]\s*', '', q.strip())
-                        q = re.sub(r'^[-•]\s*', '', q)
-                        if q:
-                            cleaned.append(q)
-
-            logger.debug("[%s] Generated %d valid suggestions from %d candidates", req_id, len(cleaned), len(questions))
+            logger.debug("[%s] Generated %d valid suggestions from %d candidates", req_id, len(cleaned), candidate_count)
 
             if len(cleaned) >= config.DEFAULT_RAG_SUGGESTION_COUNT:
                 return cleaned[:config.DEFAULT_RAG_SUGGESTION_COUNT]
@@ -443,21 +455,18 @@ def generate_suggested_questions(
     Raises:
         Exception: If generation fails (caller should handle with fallback)
     """
-    fallback_suggestions = [
-        "Can you tell me about your background?",
-        "What kind of experience do you have?"
-    ]
-    
+    fallback_suggestions = DEFAULT_SUGGESTION_FALLBACK
+
     try:
         pipeline, error = get_rag_pipeline()
-        
+
         if error or not pipeline:
-            print(f"RAG pipeline error for suggestions: {error}")
+            logger.warning("RAG pipeline unavailable for suggestions: %s", error)
             return fallback_suggestions
-        
+
         return pipeline.generate_suggested_questions(last_user_message, conversation_summary)
-        
+
     except Exception as e:
-        print(f"Error generating suggestions: {str(e)}")
+        logger.exception("Error generating suggestions: %s", str(e))
         return fallback_suggestions
 

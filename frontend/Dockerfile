@@ -10,8 +10,8 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm ci --only=production=false
+# Install dependencies needed for build (including devDependencies)
+RUN npm install --include=dev
 
 # Copy application source
 COPY . .
