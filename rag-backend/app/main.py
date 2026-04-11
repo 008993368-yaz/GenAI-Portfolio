@@ -108,22 +108,37 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 async def log_requests(request: Request, call_next):
     """Log request timing and final status for every API call."""
     start_time = time.perf_counter()
+    request_id = str(uuid.uuid4())[:8]
+    request.state.request_id = request_id
 
     try:
         response = await call_next(request)
     except Exception:
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         logger.exception(
-            "Unhandled error for %s %s after %.2f ms",
+            "[%s] Unhandled error for %s %s after %.2f ms from %s",
+            request_id,
             request.method,
             request.url.path,
             elapsed_ms,
+            request.client.host if request.client else "unknown",
         )
         raise
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000
-    logger.info(
-        "%s %s -> %s in %.2f ms",
+    
+    # Log at different levels based on status code
+    if response.status_code >= 500:
+        log_level = logging.ERROR
+    elif response.status_code >= 400:
+        log_level = logging.WARNING
+    else:
+        log_level = logging.INFO
+    
+    logger.log(
+        log_level,
+        "[%s] %s %s -> %s in %.2f ms",
+        request_id,
         request.method,
         request.url.path,
         response.status_code,
@@ -262,14 +277,15 @@ async def chat(request: Request, payload: ChatRequest):
 
 # RAG search endpoint (debug - no LLM)
 @app.post("/rag/search", response_model=SearchResponse)
-async def search_resume(request: SearchRequest):
+async def search_resume(request: Request, search_req: SearchRequest):
     """
     Semantic search over resume chunks
     
     This is a debug endpoint that returns raw retrieval results without LLM processing.
     
     Args:
-        request: SearchRequest containing query and top_k
+        request: FastAPI Request object
+        search_req: SearchRequest containing query and top_k
         
     Returns:
         SearchResponse with matched chunks
@@ -277,21 +293,52 @@ async def search_resume(request: SearchRequest):
     Raises:
         HTTPException: If Pinecone is not configured or search fails
     """
+    request_id = request.state.request_id
+    start_time = time.perf_counter()
+    query_len = len(search_req.query)
+    
     try:
-        # Retrieve relevant context
-        matches = retrieve_resume_context(
-            query=request.query,
-            top_k=request.top_k
+        logger.info(
+            "[%s] Search request: query_len=%d, top_k=%d",
+            request_id,
+            query_len,
+            search_req.top_k,
         )
         
+        # Retrieve relevant context
+        search_start = time.perf_counter()
+        matches = retrieve_resume_context(
+            query=search_req.query,
+            top_k=search_req.top_k,
+            request_id=request_id,
+        )
+        search_ms = (time.perf_counter() - search_start) * 1000
+        logger.info(
+            "[%s] Retrieval completed in %.2f ms (matches=%d)",
+            request_id,
+            search_ms,
+            len(matches),
+        )
+        
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info("[%s] Search response completed in %.2f ms", request_id, elapsed_ms)
+        
         return SearchResponse(
-            query=request.query,
+            query=search_req.query,
             matches=matches,
             count=len(matches)
         )
         
     except ValueError as e:
         # Configuration error (missing env vars)
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.error(
+            "[%s] Configuration error after %.2f ms: %s",
+            request_id,
+            elapsed_ms,
+            str(e),
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=500,
             detail={

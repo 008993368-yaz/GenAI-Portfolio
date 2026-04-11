@@ -283,7 +283,7 @@ class ResumeRetriever:
             search_kwargs={"k": 5}
         )
     
-    def retrieve(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def retrieve(self, query: str, top_k: int = 5, request_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant resume context for a query
         
@@ -382,7 +382,7 @@ def get_retriever() -> tuple[Optional[ResumeRetriever], Optional[str]]:
         return None, f"Failed to initialize Pinecone retriever: {str(e)}"
 
 
-def retrieve_resume_context(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+def retrieve_resume_context(query: str, top_k: int = 5, request_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Main retrieval function - retrieve relevant resume context for a query
     

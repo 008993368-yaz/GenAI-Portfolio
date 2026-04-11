@@ -171,7 +171,8 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         self,
         query: str,
         conversation_history: Optional[List[Dict]] = None,
-        top_k: Optional[int] = None
+        top_k: Optional[int] = None,
+        request_id: Optional[str] = None
     ) -> str:
         """
         Generate response using RAG pipeline
@@ -180,12 +181,18 @@ Please answer based ONLY on the resume context above. If the context doesn't con
             query: User's question
             conversation_history: Previous messages (list of dicts with 'role' and 'content')
             top_k: Number of chunks to retrieve (updates retriever if different)
+            request_id: Request ID for tracing
             
         Returns:
             Generated response
         """
+        import time
+        req_id = request_id or "N/A"
+        gen_start = time.perf_counter()
+        
         # Update retriever k if specified
         if top_k is not None and top_k != self.config.rag_top_k:
+            logger.debug("[%s] Updating retriever top_k from %d to %d", req_id, self.config.rag_top_k, top_k)
             self.retriever = self.retriever_instance.get_retriever(k=top_k)
             self.retrieval_chain = create_retrieval_chain(
                 retriever=self.retriever,
@@ -200,19 +207,43 @@ Please answer based ONLY on the resume context above. If the context doesn't con
                     chat_history.append(HumanMessage(content=msg['content']))
                 elif msg['role'] == 'assistant':
                     chat_history.append(AIMessage(content=msg['content']))
+        logger.debug("[%s] Converted %d messages to LangChain format", req_id, len(chat_history))
         
         # Invoke the retrieval chain
-        result = self._invoke_retrieval_chain_with_retry({
-            "input": query,
-            "chat_history": chat_history if chat_history else []
-        })
-        
-        return result["answer"]
+        try:
+            retrieve_start = time.perf_counter()
+            result = self._invoke_retrieval_chain_with_retry({
+                "input": query,
+                "chat_history": chat_history if chat_history else []
+            })
+            retrieve_ms = (time.perf_counter() - retrieve_start) * 1000
+            
+            answer = result["answer"]
+            gen_ms = (time.perf_counter() - gen_start) * 1000
+            logger.info(
+                "[%s] Response generation completed in %.2f ms (retrieve=%.2f, answer_len=%d)",
+                req_id,
+                gen_ms,
+                retrieve_ms,
+                len(answer),
+            )
+            return answer
+        except Exception as e:
+            gen_ms = (time.perf_counter() - gen_start) * 1000
+            logger.error(
+                "[%s] Response generation failed after %.2f ms: %s",
+                req_id,
+                gen_ms,
+                str(e),
+                exc_info=True,
+            )
+            raise
     
     def generate_suggested_questions(
         self,
         last_user_message: Optional[str] = None,
-        conversation_summary: Optional[str] = None
+        conversation_summary: Optional[str] = None,
+        request_id: Optional[str] = None
     ) -> List[str]:
         """
         Generate 2 contextually relevant suggested questions using LangChain
@@ -220,10 +251,14 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         Args:
             last_user_message: Most recent user message for context
             conversation_summary: Summary of the conversation so far
+            request_id: Request ID for tracing
             
         Returns:
             List of 2 suggested questions
         """
+        import time
+        req_id = request_id or "N/A"
+        gen_start = time.perf_counter()
         # Default fallback suggestions
         fallback = [
             "Can you tell me about your background?",
@@ -279,12 +314,16 @@ Generate the 2 questions now:""")
                 "format_instructions": parser.get_format_instructions()
             })
             
+            gen_ms = (time.perf_counter() - gen_start) * 1000
+            logger.info("[%s] Suggestion generation completed in %.2f ms", req_id, gen_ms)
+            
             # Extract and validate questions
             if isinstance(result, dict) and "questions" in result:
                 questions = result["questions"]
             elif isinstance(result, list):
                 questions = result
             else:
+                logger.warning("[%s] Unexpected suggestion format, returning fallback", req_id)
                 return fallback
             
             # Clean and validate
@@ -298,16 +337,26 @@ Generate the 2 questions now:""")
                     if q:
                         cleaned.append(q)
             
+            logger.debug("[%s] Generated %d valid suggestions from %d candidates", req_id, len(cleaned), len(questions))
+            
             # Return cleaned or fallback
             if len(cleaned) >= 2:
                 return cleaned[:2]
             elif len(cleaned) == 1:
                 return cleaned + [fallback[1]]
             else:
+                logger.info("[%s] Could not generate valid suggestions, returning fallback", req_id)
                 return fallback
                 
         except Exception as e:
-            print(f"Error generating suggestions: {str(e)}")
+            gen_ms = (time.perf_counter() - gen_start) * 1000
+            logger.error(
+                "[%s] Suggestion generation failed after %.2f ms: %s",
+                req_id,
+                gen_ms,
+                str(e),
+                exc_info=True,
+            )
             return fallback
 
 
