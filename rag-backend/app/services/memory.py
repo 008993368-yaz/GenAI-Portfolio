@@ -3,10 +3,17 @@ Session Memory Service
 LangChain-based conversation history management per session
 """
 
+import logging
+import threading
+import time
 from typing import Dict, List, Optional
-from collections import defaultdict
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.schema import HumanMessage, AIMessage, BaseMessage
+
+from app.config import config
+
+
+logger = logging.getLogger(__name__)
 
 
 class SessionMemory:
@@ -17,22 +24,94 @@ class SessionMemory:
     Each session has its own independent memory instance.
     """
     
-    def __init__(self, max_messages_per_session: int = 10):
+    def __init__(
+        self,
+        max_messages_per_session: int = 10,
+        session_ttl_seconds: int = 3600,
+        cleanup_interval_seconds: int = 300,
+    ):
         """
         Initialize session memory manager
         
         Args:
             max_messages_per_session: Maximum message pairs (user+AI) to keep per session
+            session_ttl_seconds: Session time to live in seconds
+            cleanup_interval_seconds: Interval between cleanup sweeps in seconds
         """
         # Convert to message window size (divide by 2 since each exchange is user+AI)
         self.k = max(1, max_messages_per_session // 2)
-        self._sessions: Dict[str, ConversationBufferWindowMemory] = defaultdict(
-            lambda: ConversationBufferWindowMemory(
-                k=self.k,
-                return_messages=True,
-                memory_key="chat_history"
-            )
+        self._session_ttl_seconds = max(1, session_ttl_seconds)
+        self._cleanup_interval_seconds = max(1, cleanup_interval_seconds)
+
+        self._sessions: Dict[str, ConversationBufferWindowMemory] = {}
+        self._last_access_by_session: Dict[str, float] = {}
+        self._lock = threading.RLock()
+
+        self._cleanup_count = 0
+        self._cleanup_runs = 0
+
+        self._stop_event = threading.Event()
+        self._cleanup_thread = threading.Thread(
+            target=self._cleanup_loop,
+            name="session-memory-cleanup",
+            daemon=True,
         )
+        self._cleanup_thread.start()
+        logger.info(
+            "SessionMemory initialized (ttl=%ss, cleanup_interval=%ss)",
+            self._session_ttl_seconds,
+            self._cleanup_interval_seconds,
+        )
+
+    def _create_memory(self) -> ConversationBufferWindowMemory:
+        return ConversationBufferWindowMemory(
+            k=self.k,
+            return_messages=True,
+            memory_key="chat_history",
+        )
+
+    def _touch_session(self, session_id: str, now: Optional[float] = None) -> None:
+        self._last_access_by_session[session_id] = now if now is not None else time.time()
+
+    def _get_or_create_session_memory(self, session_id: str) -> ConversationBufferWindowMemory:
+        memory = self._sessions.get(session_id)
+        if memory is None:
+            memory = self._create_memory()
+            self._sessions[session_id] = memory
+            logger.info("Created new session memory: %s", session_id)
+
+        self._touch_session(session_id)
+        return memory
+
+    def _cleanup_loop(self) -> None:
+        while not self._stop_event.wait(self._cleanup_interval_seconds):
+            removed_count = self.cleanup_expired_sessions()
+            if removed_count > 0:
+                logger.info(
+                    "Session cleanup removed %s expired session(s); active_sessions=%s, total_cleaned=%s",
+                    removed_count,
+                    self.get_session_count(),
+                    self.get_cleanup_count(),
+                )
+
+    def cleanup_expired_sessions(self) -> int:
+        now = time.time()
+
+        with self._lock:
+            self._cleanup_runs += 1
+            expired_session_ids = [
+                session_id
+                for session_id, last_access in self._last_access_by_session.items()
+                if now - last_access >= self._session_ttl_seconds
+            ]
+
+            for session_id in expired_session_ids:
+                self._sessions.pop(session_id, None)
+                self._last_access_by_session.pop(session_id, None)
+
+            removed_count = len(expired_session_ids)
+            self._cleanup_count += removed_count
+            return removed_count
     
     def add_message(self, session_id: str, role: str, content: str) -> None:
         """
@@ -43,14 +122,20 @@ class SessionMemory:
             role: "user" or "assistant"
             content: Message content
         """
-        memory = self._sessions[session_id]
-        
-        if role == "user":
-            # Save user input
-            memory.chat_memory.add_user_message(content)
-        elif role == "assistant":
-            # Save AI response
-            memory.chat_memory.add_ai_message(content)
+        with self._lock:
+            memory = self._get_or_create_session_memory(session_id)
+
+            if role == "user":
+                # Save user input
+                memory.chat_memory.add_user_message(content)
+            elif role == "assistant":
+                # Save AI response
+                memory.chat_memory.add_ai_message(content)
+            else:
+                logger.warning("Unsupported message role '%s' for session %s", role, session_id)
+                return
+
+            logger.info("Added %s message for session %s", role, session_id)
     
     def get_history(self, session_id: str) -> List[BaseMessage]:
         """
@@ -62,11 +147,13 @@ class SessionMemory:
         Returns:
             List of BaseMessage objects (HumanMessage, AIMessage)
         """
-        if session_id not in self._sessions:
-            return []
-        
-        memory = self._sessions[session_id]
-        return memory.chat_memory.messages
+        with self._lock:
+            if session_id not in self._sessions:
+                return []
+
+            self._touch_session(session_id)
+            memory = self._sessions[session_id]
+            return list(memory.chat_memory.messages)
     
     def get_history_for_llm(self, session_id: str) -> List[Dict]:
         """
@@ -99,7 +186,8 @@ class SessionMemory:
         Returns:
             ConversationBufferWindowMemory instance
         """
-        return self._sessions[session_id]
+        with self._lock:
+            return self._get_or_create_session_memory(session_id)
     
     def clear_session(self, session_id: str) -> None:
         """
@@ -108,18 +196,47 @@ class SessionMemory:
         Args:
             session_id: Session to clear
         """
-        if session_id in self._sessions:
-            self._sessions[session_id].clear()
+        with self._lock:
+            if session_id in self._sessions:
+                self._sessions[session_id].clear()
+                self._sessions.pop(session_id, None)
+                self._last_access_by_session.pop(session_id, None)
+                logger.info("Cleared session memory: %s", session_id)
     
     def get_session_count(self) -> int:
         """Get number of active sessions"""
-        return len(self._sessions)
+        with self._lock:
+            return len(self._sessions)
+
+    def get_cleanup_count(self) -> int:
+        """Get total number of sessions removed by the TTL sweeper."""
+        with self._lock:
+            return self._cleanup_count
+
+    def get_cleanup_runs(self) -> int:
+        """Get total number of cleanup sweeps executed."""
+        with self._lock:
+            return self._cleanup_runs
+
+    def get_metrics(self) -> Dict[str, int]:
+        """Get thread-safe session memory metrics."""
+        with self._lock:
+            return {
+                "active_sessions": len(self._sessions),
+                "cleanup_count": self._cleanup_count,
+                "cleanup_runs": self._cleanup_runs,
+                "session_ttl_seconds": self._session_ttl_seconds,
+                "cleanup_interval_seconds": self._cleanup_interval_seconds,
+            }
     
     def get_message_count(self, session_id: str) -> int:
         """Get number of messages in a session"""
-        if session_id not in self._sessions:
-            return 0
-        return len(self._sessions[session_id].chat_memory.messages)
+        with self._lock:
+            if session_id not in self._sessions:
+                return 0
+
+            self._touch_session(session_id)
+            return len(self._sessions[session_id].chat_memory.messages)
 
 
 # Global singleton instance
@@ -135,5 +252,9 @@ def get_memory() -> SessionMemory:
     """
     global _memory
     if _memory is None:
-        _memory = SessionMemory(max_messages_per_session=10)
+        _memory = SessionMemory(
+            max_messages_per_session=10,
+            session_ttl_seconds=config.SESSION_TTL,
+            cleanup_interval_seconds=config.SESSION_CLEANUP_INTERVAL,
+        )
     return _memory

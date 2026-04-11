@@ -23,6 +23,10 @@ class Config:
     # RAG Configuration
     RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "5"))
 
+    # Session memory configuration
+    SESSION_TTL: int = int(os.getenv("SESSION_TTL", "3600"))
+    SESSION_CLEANUP_INTERVAL: int = int(os.getenv("SESSION_CLEANUP_INTERVAL", "300"))
+
     # Rate limiting configuration
     RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
     RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
