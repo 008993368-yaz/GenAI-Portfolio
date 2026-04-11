@@ -1,20 +1,13 @@
-import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import EducationItem from './EducationItem';
+import RevealSection from './RevealSection';
 
 const EducationSection = ({ education }) => {
-  const { ref, isVisible } = useIntersectionObserver();
-
   return (
-    <section id="education" className="section" ref={ref} style={{
-      opacity: isVisible ? 1 : 0,
-      transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-      transition: 'opacity 0.6s ease, transform 0.6s ease'
-    }}>
-      <h2 className="section-title">Education</h2>
+    <RevealSection id="education" title="Education">
       {education.map((edu) => (
         <EducationItem key={edu.id} education={edu} />
       ))}
-    </section>
+    </RevealSection>
   );
 };
 

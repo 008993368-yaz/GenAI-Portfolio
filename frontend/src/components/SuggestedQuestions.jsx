@@ -1,5 +1,9 @@
 import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { fetchSuggestions } from '../services/chatApi';
+import {
+  SUGGESTION_ERROR_MESSAGES,
+  SUGGESTION_FALLBACK_QUESTIONS,
+} from '../constants';
 
 const SUGGESTION_STATUS = {
   IDLE: 'idle',
@@ -19,10 +23,7 @@ const SuggestedQuestions = memo(({
   const [status, setStatus] = useState(SUGGESTION_STATUS.IDLE);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  const fallbackSuggestions = useMemo(() => [
-    'Can you tell me about your background?',
-    'How much work experience do you have?',
-  ], []);
+  const fallbackSuggestions = useMemo(() => SUGGESTION_FALLBACK_QUESTIONS, []);
 
   const loadSuggestions = useCallback(async () => {
     if (!isVisible) return;
@@ -30,7 +31,7 @@ const SuggestedQuestions = memo(({
     if (!isOnline) {
       setSuggestions(fallbackSuggestions);
       setStatus(SUGGESTION_STATUS.ERROR);
-      setErrorMessage('Suggestions are in offline mode. Showing defaults.');
+      setErrorMessage(SUGGESTION_ERROR_MESSAGES.OFFLINE_MODE);
       return;
     }
 
@@ -58,13 +59,13 @@ const SuggestedQuestions = memo(({
       setStatus(SUGGESTION_STATUS.ERROR);
 
       if (error?.code === 'OFFLINE') {
-        setErrorMessage('You are offline. Showing default suggestions.');
+        setErrorMessage(SUGGESTION_ERROR_MESSAGES.OFFLINE);
       } else if (error?.code === 'TIMEOUT') {
-        setErrorMessage('Suggestions timed out. Showing defaults.');
+        setErrorMessage(SUGGESTION_ERROR_MESSAGES.TIMEOUT);
       } else if (error?.code === 'NETWORK_ERROR') {
-        setErrorMessage('Cannot load suggestions right now. Showing defaults.');
+        setErrorMessage(SUGGESTION_ERROR_MESSAGES.NETWORK);
       } else {
-        setErrorMessage('Unable to refresh suggestions. Showing defaults.');
+        setErrorMessage(SUGGESTION_ERROR_MESSAGES.DEFAULT);
       }
     }
   }, [isVisible, isOnline, lastUserMessage, fallbackSuggestions]);

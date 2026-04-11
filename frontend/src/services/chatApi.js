@@ -3,19 +3,18 @@
  */
 
 import {
+  CHAT_OFFLINE_MESSAGE,
   CHAT_REQUEST_TIMEOUT_MS,
   SESSION_ID_RANDOM_SUFFIX_LENGTH,
 } from '../constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const SESSION_STORAGE_KEY = 'portfolio_chat_session_id';
+const KNOWN_ERROR_CODES = new Set(['OFFLINE', 'TIMEOUT', 'NETWORK_ERROR', 'HTTP_ERROR']);
 
 function ensureOnline() {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    throw buildApiError(
-      'You are currently offline. Please reconnect and try again.',
-      'OFFLINE'
-    );
+    throw buildApiError(CHAT_OFFLINE_MESSAGE, 'OFFLINE');
   }
 }
 
@@ -24,6 +23,10 @@ function buildApiError(message, code, status = null) {
   error.code = code;
   error.status = status;
   return error;
+}
+
+function isKnownApiError(error) {
+  return KNOWN_ERROR_CODES.has(error?.code);
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = CHAT_REQUEST_TIMEOUT_MS) {
@@ -55,6 +58,36 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = CHAT_REQUEST_TIME
   }
 }
 
+async function requestJson(endpoint, { method = 'GET', body = null, timeoutMs = CHAT_REQUEST_TIMEOUT_MS } = {}) {
+  ensureOnline();
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : null,
+  }, timeoutMs);
+
+  if (!response.ok) {
+    throw buildApiError(
+      `Request failed with status ${response.status}.`,
+      'HTTP_ERROR',
+      response.status
+    );
+  }
+
+  return response.json();
+}
+
+function mapUnknownError(defaultMessage, error) {
+  if (isKnownApiError(error)) {
+    throw error;
+  }
+
+  throw buildApiError(defaultMessage, 'UNKNOWN_ERROR');
+}
+
 function getSessionId() {
   let sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
 
@@ -70,88 +103,31 @@ export async function sendMessage(message) {
   const sessionId = getSessionId();
 
   try {
-    ensureOnline();
-
-    const response = await fetchWithTimeout(`${API_BASE_URL}/chat`, {
+    const data = await requestJson('/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         sessionId,
         message,
-      }),
+      },
     });
-
-    if (!response.ok) {
-      throw buildApiError(
-        `Chat request failed with status ${response.status}. Please try again.`,
-        'HTTP_ERROR',
-        response.status
-      );
-    }
-
-    const data = await response.json();
     return data.reply;
   } catch (error) {
     console.error('Chat API error:', error);
-
-    if (
-      error?.code === 'OFFLINE' ||
-      error?.code === 'TIMEOUT' ||
-      error?.code === 'NETWORK_ERROR' ||
-      error?.code === 'HTTP_ERROR'
-    ) {
-      throw error;
-    }
-
-    throw buildApiError(
-      'Something went wrong while sending your message. Please try again.',
-      'UNKNOWN_ERROR'
-    );
+    mapUnknownError('Something went wrong while sending your message. Please try again.', error);
   }
 }
 
 export async function fetchSuggestions(payload = {}) {
   try {
-    ensureOnline();
-
-    const response = await fetchWithTimeout(`${API_BASE_URL}/suggestions`, {
+    return await requestJson('/suggestions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         last_user_message: payload.last_user_message || null,
         conversation_summary: payload.conversation_summary || null,
-      }),
+      },
     });
-
-    if (!response.ok) {
-      throw buildApiError(
-        `Suggestions request failed with status ${response.status}.`,
-        'HTTP_ERROR',
-        response.status
-      );
-    }
-
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.error('Suggestions API error:', error);
-
-    if (
-      error?.code === 'OFFLINE' ||
-      error?.code === 'TIMEOUT' ||
-      error?.code === 'NETWORK_ERROR' ||
-      error?.code === 'HTTP_ERROR'
-    ) {
-      throw error;
-    }
-
-    throw buildApiError(
-      'Something went wrong while loading suggestions. Please try again.',
-      'UNKNOWN_ERROR'
-    );
+    mapUnknownError('Something went wrong while loading suggestions. Please try again.', error);
   }
 }

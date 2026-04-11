@@ -21,7 +21,6 @@ const ChatbotButton = lazy(() => import('./components/ChatbotButton'));
 function App() {
   const sectionIds = navLinks.map(link => link.id);
   const activeSection = useScrollSpy(sectionIds);
-  const chatbotPreloadRef = useRef(null);
   const isPreloadedRef = useRef(false);
 
   const handleNavClick = (sectionId) => {
@@ -40,14 +39,6 @@ function App() {
         console.warn('Failed to preload ChatbotButton:', err);
       });
     }
-  };
-
-  const handleChatbotHover = () => {
-    preloadChatbotComponent();
-  };
-
-  const handleChatbotFocus = () => {
-    preloadChatbotComponent();
   };
 
   useEffect(() => {
@@ -109,9 +100,8 @@ function App() {
         - Preload handlers: Triggers component load on hover/focus for instant interaction
       */}
       <div 
-        ref={chatbotPreloadRef}
-        onMouseEnter={handleChatbotHover}
-        onFocus={handleChatbotFocus}
+        onMouseEnter={preloadChatbotComponent}
+        onFocus={preloadChatbotComponent}
       >
         <ErrorBoundary>
           <Suspense fallback={<ChatbotSkeleton />}>
