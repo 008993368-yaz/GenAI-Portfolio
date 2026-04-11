@@ -57,7 +57,9 @@ const SuggestedQuestions = memo(({
       setSuggestions(fallbackSuggestions);
       setStatus(SUGGESTION_STATUS.ERROR);
 
-      if (error?.code === 'TIMEOUT') {
+      if (error?.code === 'OFFLINE') {
+        setErrorMessage('You are offline. Showing default suggestions.');
+      } else if (error?.code === 'TIMEOUT') {
         setErrorMessage('Suggestions timed out. Showing defaults.');
       } else if (error?.code === 'NETWORK_ERROR') {
         setErrorMessage('Cannot load suggestions right now. Showing defaults.');
