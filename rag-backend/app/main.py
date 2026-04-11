@@ -6,8 +6,11 @@ Portfolio chatbot backend with resume retrieval
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
+from http import HTTPStatus
 
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
@@ -50,6 +53,53 @@ def configure_logging() -> logging.Logger:
 
 
 logger = configure_logging()
+
+
+def _get_request_id(request: Request) -> str:
+    request_id = getattr(request.state, "request_id", None)
+    if not request_id:
+        request_id = uuid.uuid4().hex
+        request.state.request_id = request_id
+    return request_id
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _status_phrase(status_code: int) -> str:
+    try:
+        return HTTPStatus(status_code).phrase
+    except ValueError:
+        return "Error"
+
+
+def _extract_error_message(detail: Any) -> str:
+    if isinstance(detail, dict):
+        return str(detail.get("detail") or detail.get("error") or detail)
+    if isinstance(detail, list):
+        return "; ".join(str(item) for item in detail)
+    if detail is None:
+        return ""
+    return str(detail)
+
+
+def _attach_request_id_header(response: Response, request_id: str) -> Response:
+    """Attach the request identifier to the outbound response headers."""
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+def _build_error_response(request: Request, status_code: int, error: str, detail: str) -> JSONResponse:
+    request_id = _get_request_id(request)
+    payload = ErrorResponse(
+        error=error,
+        detail=detail,
+        timestamp=_utc_timestamp(),
+        request_id=request_id,
+    )
+    response = JSONResponse(status_code=status_code, content=payload.model_dump())
+    return _attach_request_id_header(response, request_id)
 
 # Prometheus metrics
 REQUEST_COUNT = Counter(
@@ -134,12 +184,12 @@ app.add_middleware(
 
 async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     """Return a 429 response with rate limit headers."""
-    response = JSONResponse(
+    request_id = _get_request_id(request)
+    response = _build_error_response(
+        request=request,
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        content={
-            "error": "Rate limit exceeded",
-            "detail": str(exc.detail),
-        },
+        error="Rate Limit Exceeded",
+        detail=str(exc.detail) if Config.DEBUG else "Too many requests. Please try again later.",
     )
 
     current_limit = getattr(request.state, "view_rate_limit", None)
@@ -149,7 +199,8 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         response.headers["Retry-After"] = str(Config.RATE_LIMIT_RETRY_AFTER_SECONDS)
 
     logger.warning(
-        "Rate limit exceeded for %s %s from %s",
+        "[%s] Rate limit exceeded for %s %s from %s",
+        request_id,
         request.method,
         request.url.path,
         request.client.host if request.client else "unknown",
@@ -160,11 +211,82 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    request_id = _get_request_id(request)
+    status_code = exc.status_code
+    error = _status_phrase(status_code)
+    if isinstance(exc.detail, dict):
+        error = str(exc.detail.get("error") or error)
+
+    if status_code >= 500 and not Config.DEBUG:
+        detail = "An unexpected server error occurred."
+    else:
+        detail = _extract_error_message(exc.detail) or error
+
+    log_level = logging.ERROR if status_code >= 500 else logging.WARNING
+    logger.log(
+        log_level,
+        "[%s] HTTPException for %s %s -> %d: %s",
+        request_id,
+        request.method,
+        request.url.path,
+        status_code,
+        detail,
+    )
+    if status_code >= 500:
+        logger.debug("[%s] HTTPException raw detail: %r", request_id, exc.detail)
+
+    return _build_error_response(request, status_code, error, detail)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    request_id = _get_request_id(request)
+    detail = "; ".join(error.get("msg", "Invalid request") for error in exc.errors())
+    if not Config.DEBUG:
+        detail = "Request validation failed."
+
+    logger.warning(
+        "[%s] Validation error for %s %s: %s",
+        request_id,
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    return _build_error_response(
+        request,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        "Validation Error",
+        detail,
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = _get_request_id(request)
+    detail = str(exc) if Config.DEBUG else "An unexpected server error occurred."
+
+    logger.exception(
+        "[%s] Unhandled exception for %s %s from %s",
+        request_id,
+        request.method,
+        request.url.path,
+        request.client.host if request.client else "unknown",
+    )
+    return _build_error_response(
+        request,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        detail,
+    )
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log request timing and final status for every API call."""
+    """Log request timing and final status, and propagate the same request ID on every response."""
     start_time = time.perf_counter()
-    request_id = str(uuid.uuid4())[:8]
+    request_id = uuid.uuid4().hex
     request.state.request_id = request_id
     endpoint = request.url.path
 
@@ -219,7 +341,7 @@ async def log_requests(request: Request, call_next):
         response.status_code,
         elapsed_ms,
     )
-    return response
+    return _attach_request_id_header(response, request_id)
 
 
 # Pydantic models
@@ -253,6 +375,8 @@ class SearchResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str
+    timestamp: str
+    request_id: str
 
 
 class SuggestionsRequest(BaseModel):
@@ -335,20 +459,14 @@ async def chat(request: Request, payload: ChatRequest):
         ERROR_COUNT.labels(endpoint="/chat", error_type="configuration_error").inc()
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Configuration Error",
-                "detail": str(e)
-            }
+            detail="Configuration error while processing chat request."
         )
     except Exception as e:
         # Other errors
         ERROR_COUNT.labels(endpoint="/chat", error_type="chat_error").inc()
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Chat Error",
-                "detail": f"Failed to generate response: {str(e)}"
-            }
+            detail="Failed to generate chat response."
         )
 
 
@@ -419,20 +537,14 @@ async def search_resume(request: Request, search_req: SearchRequest):
         )
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Configuration Error",
-                "detail": str(e)
-            }
+            detail="Configuration error while searching resume data."
         )
     except Exception as e:
         # Other errors (Pinecone API, network, etc.)
         ERROR_COUNT.labels(endpoint="/rag/search", error_type="search_error").inc()
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Search Error",
-                "detail": f"Failed to search resume: {str(e)}"
-            }
+            detail="Failed to search resume."
         )
 
 
@@ -455,27 +567,14 @@ async def get_suggestions(request: Request, payload: SuggestionsRequest):
     Raises:
         HTTPException: If generation fails
     """
-    try:
-        # Generate suggestions using RAG service
-        suggestions = generate_suggested_questions(
-            last_user_message=payload.last_user_message,
-            conversation_summary=payload.conversation_summary
-        )
-        
-        return SuggestionsResponse(suggestions=suggestions)
-        
-    except Exception as e:
-        # Log error but don't expose details to client
-        ERROR_COUNT.labels(endpoint="/suggestions", error_type="suggestions_error").inc()
-        print(f"Suggestions generation error: {str(e)}")
-        
-        # Return fallback suggestions on any error
-        fallback_suggestions = [
-            "Can you tell me about your background?",
-            "What kind of experience do you have?"
-        ]
-        
-        return SuggestionsResponse(suggestions=fallback_suggestions)
+    # Generate suggestions using RAG service. The service already returns a fallback list
+    # if generation fails, so this endpoint can remain a simple successful response.
+    suggestions = generate_suggested_questions(
+        last_user_message=payload.last_user_message,
+        conversation_summary=payload.conversation_summary
+    )
+
+    return SuggestionsResponse(suggestions=suggestions)
 
 
 # Additional info endpoint
