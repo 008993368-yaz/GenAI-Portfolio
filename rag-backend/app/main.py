@@ -24,6 +24,7 @@ from starlette.responses import JSONResponse, Response
 from app.services.retriever import retrieve_resume_context
 from app.services.chat_orchestrator import generate_chat_reply
 from app.services.rag import generate_suggested_questions
+from app.services.memory import get_memory
 from app.config import Config
 
 
@@ -401,7 +402,7 @@ async def root():
 # Chat endpoint - main RAG pipeline
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit(Config.CHAT_RATE_LIMIT)
-async def chat(request: Request, payload: ChatRequest):
+async def chat(request: Request, payload: ChatRequest, response: Response):
     """
     Chat with Yazhini's portfolio assistant
     
@@ -522,7 +523,7 @@ async def search_resume(request: Request, search_req: SearchRequest):
 # Suggestions endpoint
 @app.post("/suggestions", response_model=SuggestionsResponse)
 @limiter.limit(Config.SUGGESTIONS_RATE_LIMIT)
-async def get_suggestions(request: Request, payload: SuggestionsRequest):
+async def get_suggestions(request: Request, payload: SuggestionsRequest, response: Response):
     """
     Generate suggested questions for the chatbot
     

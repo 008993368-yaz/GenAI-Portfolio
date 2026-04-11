@@ -53,13 +53,14 @@ class Config:
     RATE_LIMIT_RETRY_AFTER_SECONDS: int = int(os.getenv("RATE_LIMIT_RETRY_AFTER_SECONDS", "60"))
 
     # Logging configuration
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes", "on"}
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: str = os.getenv("LOG_FILE", "rag-backend.log")
     
     # CORS Configuration
     CORS_ORIGINS: str = os.getenv(
         "CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:3000"
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
     )
     
     @classmethod
