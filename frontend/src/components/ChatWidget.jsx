@@ -2,6 +2,12 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { sendMessage } from '../services/chatApi';
 import ChatMessage from './ChatMessage';
 import SuggestedQuestions from './SuggestedQuestions';
+import {
+  HTTP_STATUS_SERVER_ERROR,
+  HTTP_STATUS_UNKNOWN,
+  HTTP_STATUS_TOO_MANY_REQUESTS,
+  MAX_CHAT_MESSAGES,
+} from '../constants';
 
 const CHAT_STATUS = {
   IDLE: 'idle',
@@ -9,6 +15,19 @@ const CHAT_STATUS = {
   SUCCESS: 'success',
   ERROR: 'error',
 };
+
+function limitMessages(messages) {
+  return messages.slice(-MAX_CHAT_MESSAGES);
+}
+
+const CHAT_STATUS_LABELS = {
+  [CHAT_STATUS.IDLE]: 'Ready',
+  [CHAT_STATUS.LOADING]: 'Sending...',
+  [CHAT_STATUS.ERROR]: 'Error',
+  [CHAT_STATUS.SUCCESS]: 'Connected',
+};
+
+const OFFLINE_CHAT_MESSAGE = 'You are offline. Reconnect to send messages.';
 
 const ChatWidget = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
@@ -84,7 +103,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setChatStatus(CHAT_STATUS.ERROR);
       setChatError({
         type: 'OFFLINE',
-        message: 'You are offline. Messages cannot be sent until your connection is restored.',
+        message: OFFLINE_CHAT_MESSAGE,
         retryable: true,
       });
     };
@@ -119,14 +138,14 @@ const ChatWidget = ({ isOpen, onClose }) => {
           retryable: true,
         };
       case 'HTTP_ERROR':
-        if (error?.status === 429) {
+        if (error?.status === HTTP_STATUS_TOO_MANY_REQUESTS) {
           return {
             type: 'RATE_LIMIT',
             message: 'Too many requests right now. Please wait a moment and retry.',
             retryable: true,
           };
         }
-        if ((error?.status || 0) >= 500) {
+        if ((error?.status || HTTP_STATUS_UNKNOWN) >= HTTP_STATUS_SERVER_ERROR) {
           return {
             type: 'SERVER_ERROR',
             message: 'The server is having trouble. Please try again shortly.',
@@ -156,7 +175,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setChatStatus(CHAT_STATUS.ERROR);
       setChatError({
         type: 'OFFLINE',
-        message: 'You are offline. Reconnect to send messages.',
+        message: OFFLINE_CHAT_MESSAGE,
         retryable: true,
       });
       setRetryMessage(userMessage);
@@ -167,7 +186,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setInputValue('');
     }
 
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    setMessages((prev) => limitMessages([...prev, { role: 'user', content: userMessage }]));
     setLastUserMessage(userMessage);
     setRetryMessage(null);
     setChatError(null);
@@ -176,7 +195,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
 
     try {
       const reply = await sendMessage(userMessage);
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      setMessages((prev) => limitMessages([...prev, { role: 'assistant', content: reply }]));
       setRetryMessage(null);
       setRefreshSuggestions((prev) => prev + 1);
       setChatStatus(CHAT_STATUS.SUCCESS);
@@ -190,13 +209,13 @@ const ChatWidget = ({ isOpen, onClose }) => {
       setChatError(uiError);
       setChatStatus(CHAT_STATUS.ERROR);
 
-      setMessages((prev) => [
+      setMessages((prev) => limitMessages([
         ...prev,
         {
           role: 'assistant',
           content: uiError.message,
         },
-      ]);
+      ]));
       setAnnouncement(`Error: ${uiError.message}`);
     } finally {
       setIsLoading(false);
@@ -243,10 +262,7 @@ const ChatWidget = ({ isOpen, onClose }) => {
 
   const statusLabel = useMemo(() => {
     if (!isOnline) return 'Offline';
-    if (chatStatus === CHAT_STATUS.LOADING) return 'Sending...';
-    if (chatStatus === CHAT_STATUS.ERROR) return 'Error';
-    if (chatStatus === CHAT_STATUS.SUCCESS) return 'Connected';
-    return 'Ready';
+    return CHAT_STATUS_LABELS[chatStatus] || CHAT_STATUS_LABELS[CHAT_STATUS.IDLE];
   }, [chatStatus, isOnline]);
 
   if (!isOpen) return null;

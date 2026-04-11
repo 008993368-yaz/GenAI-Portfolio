@@ -1,0 +1,7 @@
+export const CHAT_REQUEST_TIMEOUT_MS = 30_000;
+export const SESSION_ID_RANDOM_SUFFIX_LENGTH = 9;
+export const MAX_CHAT_MESSAGES = 50;
+
+export const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
+export const HTTP_STATUS_SERVER_ERROR = 500;
+export const HTTP_STATUS_UNKNOWN = 0;
