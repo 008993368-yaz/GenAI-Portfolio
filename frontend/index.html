@@ -7,12 +7,23 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
+    <script type="module">
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js').catch(function (err) {
-            console.warn('Service worker registration failed:', err);
-          });
+        window.addEventListener('load', async () => {
+          if (import.meta.env.PROD) {
+            navigator.serviceWorker.register('/sw.js').catch((err) => {
+              console.warn('Service worker registration failed:', err);
+            });
+            return;
+          }
+
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+
+          if ('caches' in window) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+          }
         });
       }
     </script>

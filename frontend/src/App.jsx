@@ -1,140 +1,72 @@
-import { useEffect, Suspense, lazy, useRef } from 'react';
-import { motion } from 'framer-motion';
-import HeroSection from './components/HeroSection';
-import Navbar from './components/Navbar';
+import { useMemo, useRef } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import Navbar from './components/nav/Navbar';
+import HeroText from './components/hero/HeroText';
+import ScrollIndicator from './components/hero/ScrollIndicator';
+import SmoothScroll from './components/shared/SmoothScroll';
+import PageTransition from './components/shared/PageTransition';
 import SkillsSection from './components/SkillsSection';
-import ProjectsSection from './components/ProjectsSection';
+import ProjectGrid from './components/projects/ProjectGrid';
 import ExperienceSection from './components/ExperienceSection';
 import EducationSection from './components/EducationSection';
 import Footer from './components/Footer';
-import ChatbotSkeleton from './components/ChatbotSkeleton';
-import ErrorBoundary from './components/ErrorBoundary';
 import { portfolioData } from './data/portfolioData';
 import { navLinks } from './data/navigation';
 import { useScrollSpy } from './hooks/useScrollSpy';
-import { smoothScrollTo } from './utils/scroll';
 import './App.css';
 
-// Lazy load the ChatbotButton component to reduce initial bundle size
-// Code splitting: ChatbotButton and its dependency (ChatWidget) are loaded on demand
-const ChatbotButton = lazy(() => import('./components/ChatbotButton'));
-
 function App() {
-  const sectionIds = navLinks.map(link => link.id);
+  const heroSectionRef = useRef(null);
+  const sectionIds = useMemo(() => navLinks.map((link) => link.id), []);
   const activeSection = useScrollSpy(sectionIds);
-  const isPreloadedRef = useRef(false);
+  const reducedMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll();
+
+  const slowParallax = useTransform(scrollYProgress, [0, 1], [0, reducedMotion ? 0 : -160]);
+  const mediumParallax = useTransform(scrollYProgress, [0, 1], [0, reducedMotion ? 0 : -280]);
 
   const handleNavClick = (sectionId) => {
-    smoothScrollTo(sectionId);
+    const section = document.getElementById(sectionId);
+    section?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
   };
-
-  /**
-   * Preload the ChatbotButton component when user hovers near the bottom-right corner
-   * This improves perceived performance by loading the component before the user clicks
-   */
-  const preloadChatbotComponent = () => {
-    if (!isPreloadedRef.current) {
-      isPreloadedRef.current = true;
-      // Dynamically import the component to trigger code splitting and preload
-      import('./components/ChatbotButton').catch(err => {
-        console.warn('Failed to preload ChatbotButton:', err);
-      });
-    }
-  };
-
-  useEffect(() => {
-    // Console message for loaded portfolio
-    console.log('%c Portfolio Loaded Successfully! ', 'background: #3498db; color: white; font-size: 16px; padding: 5px 10px; border-radius: 3px;');
-
-    // Add event listeners for preloading on interaction
-    // Preload when user moves towards bottom-right corner (where chatbot button is)
-    const handleMouseMove = (e) => {
-      const chatbotArea = {
-        x: window.innerWidth - 150,
-        y: window.innerHeight - 150,
-        width: 150,
-        height: 150
-      };
-
-      if (
-        e.clientX >= chatbotArea.x &&
-        e.clientY >= chatbotArea.y
-      ) {
-        preloadChatbotComponent();
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, []);
 
   return (
-    <>
-      {/* Cinematic animated background layers */}
-      <motion.div
-        className="fixed inset-0 -z-40 bg-gradient-to-br from-slate-900 via-sky-900/40 to-slate-950 pointer-events-none"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.2 }}
-      />
-      <motion.div
-        className="fixed inset-0 -z-30 bg-gradient-to-t from-purple-600/5 via-transparent to-transparent pointer-events-none"
-        animate={{
-          background: [
-            'radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)',
-            'radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 50%)',
-            'radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%)',
-            'radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)',
-          ],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: 'linear',
-        }}
-      />
-
-      <a className="skip-link" href="#main-content">Skip to main content</a>
-      <Navbar 
-        links={navLinks} 
-        activeSection={activeSection} 
-        onNavClick={handleNavClick}
-      />
-      <HeroSection 
-        personalInfo={portfolioData.personalInfo}
-        onNavClick={handleNavClick}
-      />
-      <main id="main-content" className="main" tabIndex={-1}>
-        <div className="container">
-          <SkillsSection skills={portfolioData.skills} />
-          <ExperienceSection experience={portfolioData.experience} />
-          <ProjectsSection projects={portfolioData.projects} />
-          <EducationSection education={portfolioData.education} />
-        </div>
-      </main>
-      <Footer />
-      
-      {/* 
-        Lazy load the ChatbotButton component with error boundary and suspense
-        - ErrorBoundary: Catches errors in lazy-loaded component and displays fallback UI
-        - Suspense: Shows loading skeleton while component is being loaded
-        - Fallback: ChatbotSkeleton displays a shimmer animation during load
-        - Preload handlers: Triggers component load on hover/focus for instant interaction
-      */}
-      <div 
-        onMouseEnter={preloadChatbotComponent}
-        onFocus={preloadChatbotComponent}
-      >
-        <ErrorBoundary>
-          <Suspense fallback={<ChatbotSkeleton />}>
-            <ChatbotButton />
-          </Suspense>
-        </ErrorBoundary>
+    <SmoothScroll>
+      <div className="ambient-layer">
+        <motion.div className="ambient-orb ambient-orb--cyan" style={{ y: slowParallax }} />
+        <motion.div className="ambient-orb ambient-orb--magenta" style={{ y: mediumParallax }} />
       </div>
-    </>
+
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
+
+      <Navbar links={navLinks} activeSection={activeSection} onNavigate={handleNavClick} />
+
+      <section id="home" className="hero-section" ref={heroSectionRef}>
+        <div className="hero-grid">
+          <HeroText name={portfolioData.personalInfo.name} onPrimaryClick={() => handleNavClick('projects')} />
+        </div>
+        <ScrollIndicator onClick={() => handleNavClick('skills')} />
+      </section>
+
+      <main id="main-content" className="main-content" tabIndex={-1}>
+        <PageTransition delay={0.05}>
+          <SkillsSection skills={portfolioData.skills} />
+        </PageTransition>
+        <PageTransition delay={0.1}>
+          <ExperienceSection experience={portfolioData.experience} />
+        </PageTransition>
+        <PageTransition delay={0.15}>
+          <ProjectGrid projects={portfolioData.projects} />
+        </PageTransition>
+        <PageTransition delay={0.2}>
+          <EducationSection education={portfolioData.education} />
+        </PageTransition>
+      </main>
+
+      <Footer />
+    </SmoothScroll>
   );
 }
 
