@@ -5,16 +5,18 @@ Portfolio chatbot backend with resume retrieval
 
 import logging
 import time
+import uuid
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from app.services.retriever import retrieve_resume_context
 from app.services.guardrails import is_about_yazhini, get_off_topic_response
@@ -48,6 +50,60 @@ def configure_logging() -> logging.Logger:
 
 
 logger = configure_logging()
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    "portfolio_requests_total",
+    "Total number of HTTP requests",
+    ["method", "endpoint", "status_code"],
+)
+
+REQUEST_DURATION_SECONDS = Histogram(
+    "portfolio_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "endpoint"],
+)
+
+ERROR_COUNT = Counter(
+    "portfolio_errors_total",
+    "Total number of errors by type",
+    ["endpoint", "error_type"],
+)
+
+ACTIVE_SESSIONS = Gauge(
+    "portfolio_active_sessions",
+    "Current number of active chat sessions",
+)
+
+EMBEDDING_CACHE_HIT_RATE = Gauge(
+    "portfolio_embedding_cache_hit_rate_percent",
+    "Embedding cache hit rate as a percentage",
+)
+
+EMBEDDING_CACHE_SIZE = Gauge(
+    "portfolio_embedding_cache_size",
+    "Current number of entries in embedding cache",
+)
+
+
+def _update_runtime_gauges() -> None:
+    """Update Prometheus gauges sourced from memory and retriever services."""
+    try:
+        session_memory = get_memory()
+        ACTIVE_SESSIONS.set(session_memory.get_session_count())
+    except Exception:
+        logger.exception("Failed to update active session gauge")
+
+    try:
+        from app.services.retriever import get_retriever
+
+        retriever, _ = get_retriever()
+        if retriever:
+            cache_metrics = retriever.get_cache_metrics()
+            EMBEDDING_CACHE_HIT_RATE.set(cache_metrics.get("hit_rate_percent", 0))
+            EMBEDDING_CACHE_SIZE.set(cache_metrics.get("size", 0))
+    except Exception:
+        logger.exception("Failed to update embedding cache gauges")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -110,22 +166,41 @@ async def log_requests(request: Request, call_next):
     start_time = time.perf_counter()
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
+    endpoint = request.url.path
 
     try:
         response = await call_next(request)
     except Exception:
         elapsed_ms = (time.perf_counter() - start_time) * 1000
+        elapsed_seconds = elapsed_ms / 1000
+
+        REQUEST_DURATION_SECONDS.labels(method=request.method, endpoint=endpoint).observe(elapsed_seconds)
+        REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, status_code="500").inc()
+        ERROR_COUNT.labels(endpoint=endpoint, error_type="unhandled_exception").inc()
+        _update_runtime_gauges()
+
         logger.exception(
             "[%s] Unhandled error for %s %s after %.2f ms from %s",
             request_id,
             request.method,
-            request.url.path,
+            endpoint,
             elapsed_ms,
             request.client.host if request.client else "unknown",
         )
         raise
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000
+    elapsed_seconds = elapsed_ms / 1000
+
+    REQUEST_DURATION_SECONDS.labels(method=request.method, endpoint=endpoint).observe(elapsed_seconds)
+    REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, status_code=str(response.status_code)).inc()
+
+    if response.status_code >= 500:
+        ERROR_COUNT.labels(endpoint=endpoint, error_type="http_5xx").inc()
+    elif response.status_code >= 400:
+        ERROR_COUNT.labels(endpoint=endpoint, error_type="http_4xx").inc()
+
+    _update_runtime_gauges()
     
     # Log at different levels based on status code
     if response.status_code >= 500:
@@ -140,7 +215,7 @@ async def log_requests(request: Request, call_next):
         "[%s] %s %s -> %s in %.2f ms",
         request_id,
         request.method,
-        request.url.path,
+        endpoint,
         response.status_code,
         elapsed_ms,
     )
@@ -257,6 +332,7 @@ async def chat(request: Request, payload: ChatRequest):
         
     except ValueError as e:
         # Configuration error
+        ERROR_COUNT.labels(endpoint="/chat", error_type="configuration_error").inc()
         raise HTTPException(
             status_code=500,
             detail={
@@ -266,6 +342,7 @@ async def chat(request: Request, payload: ChatRequest):
         )
     except Exception as e:
         # Other errors
+        ERROR_COUNT.labels(endpoint="/chat", error_type="chat_error").inc()
         raise HTTPException(
             status_code=500,
             detail={
@@ -331,6 +408,7 @@ async def search_resume(request: Request, search_req: SearchRequest):
         
     except ValueError as e:
         # Configuration error (missing env vars)
+        ERROR_COUNT.labels(endpoint="/rag/search", error_type="configuration_error").inc()
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         logger.error(
             "[%s] Configuration error after %.2f ms: %s",
@@ -348,6 +426,7 @@ async def search_resume(request: Request, search_req: SearchRequest):
         )
     except Exception as e:
         # Other errors (Pinecone API, network, etc.)
+        ERROR_COUNT.labels(endpoint="/rag/search", error_type="search_error").inc()
         raise HTTPException(
             status_code=500,
             detail={
@@ -387,6 +466,7 @@ async def get_suggestions(request: Request, payload: SuggestionsRequest):
         
     except Exception as e:
         # Log error but don't expose details to client
+        ERROR_COUNT.labels(endpoint="/suggestions", error_type="suggestions_error").inc()
         print(f"Suggestions generation error: {str(e)}")
         
         # Return fallback suggestions on any error
@@ -413,8 +493,15 @@ async def get_info():
 
 
 @app.get("/metrics")
-async def get_metrics():
-    """Get system metrics (session management and embedding cache)"""
+async def get_prometheus_metrics():
+    """Expose Prometheus metrics for scraping."""
+    _update_runtime_gauges()
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/metrics/json")
+async def get_metrics_json():
+    """Get system metrics (session management and embedding cache) in JSON format."""
     from app.services.memory import get_memory
     from app.services.retriever import get_retriever
     
