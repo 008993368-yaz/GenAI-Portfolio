@@ -3,13 +3,47 @@ RAG Retriever Service
 LangChain-based semantic search over resume using Pinecone
 """
 
+import logging
 from typing import List, Dict, Any, Optional
+from httpx import ConnectError as HttpxConnectError
+from httpx import TimeoutException as HttpxTimeoutException
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain.embeddings.base import Embeddings
-from langchain.schema import Document
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout as RequestsTimeout
+from tenacity import before_sleep_log, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.config import config
+
+
+logger = logging.getLogger(__name__)
+
+
+def _is_retryable_pinecone_exception(exc: BaseException) -> bool:
+    """Return True for transient Pinecone/network errors that should be retried."""
+    retryable_types = (
+        TimeoutError,
+        ConnectionError,
+        RequestsConnectionError,
+        RequestsTimeout,
+        HttpxConnectError,
+        HttpxTimeoutException,
+    )
+    if isinstance(exc, retryable_types):
+        return True
+
+    error_text = str(exc).lower()
+    retry_markers = [
+        "timeout",
+        "timed out",
+        "connection",
+        "rate limit",
+        "too many requests",
+        "429",
+        "temporarily unavailable",
+    ]
+    return any(marker in error_text for marker in retry_markers)
 
 
 class PineconeInferenceEmbeddings(Embeddings):
@@ -28,6 +62,21 @@ class PineconeInferenceEmbeddings(Embeddings):
         """
         self.pc = pinecone_client
         self.model = model
+
+    @retry(
+        reraise=True,
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_pinecone_exception),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    def _embed_with_retry(self, texts: List[str], input_type: str):
+        """Call Pinecone inference API with retry on transient failures."""
+        return self.pc.inference.embed(
+            model=self.model,
+            inputs=texts,
+            parameters={"input_type": input_type},
+        )
     
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
@@ -41,12 +90,8 @@ class PineconeInferenceEmbeddings(Embeddings):
         """
         if not texts:
             return []
-        
-        embeddings = self.pc.inference.embed(
-            model=self.model,
-            inputs=texts,
-            parameters={"input_type": "passage"}
-        )
+
+        embeddings = self._embed_with_retry(texts=texts, input_type="passage")
         
         return [emb['values'] for emb in embeddings]
     
@@ -60,11 +105,7 @@ class PineconeInferenceEmbeddings(Embeddings):
         Returns:
             Embedding vector
         """
-        embeddings = self.pc.inference.embed(
-            model=self.model,
-            inputs=[text],
-            parameters={"input_type": "query"}
-        )
+        embeddings = self._embed_with_retry(texts=[text], input_type="query")
         
         return embeddings[0]['values']
 

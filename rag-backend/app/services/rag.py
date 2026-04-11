@@ -3,6 +3,7 @@ RAG Service
 LangChain-based RAG pipeline: retrieval from Pinecone + OpenAI generation
 """
 
+import logging
 from typing import List, Dict, Any, Optional
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -10,11 +11,42 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.schema import HumanMessage, AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+from openai import APIConnectionError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
+from tenacity import before_sleep_log, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.config import config
 
 from app.services.retriever import ResumeRetriever, RetrieverConfig
+
+
+logger = logging.getLogger(__name__)
+
+
+def _is_retryable_openai_exception(exc: BaseException) -> bool:
+    """Return True for transient OpenAI/network errors that should be retried."""
+    retryable_types = (
+        APITimeoutError,
+        APIConnectionError,
+        RateLimitError,
+        TimeoutError,
+        ConnectionError,
+    )
+    if isinstance(exc, retryable_types):
+        return True
+
+    error_text = str(exc).lower()
+    retry_markers = [
+        "timeout",
+        "timed out",
+        "connection",
+        "rate limit",
+        "too many requests",
+        "429",
+        "503",
+        "temporarily unavailable",
+    ]
+    return any(marker in error_text for marker in retry_markers)
 
 
 class SuggestedQuestions(BaseModel):
@@ -112,6 +144,28 @@ Please answer based ONLY on the resume context above. If the context doesn't con
             retriever=self.retriever,
             combine_docs_chain=self.document_chain
         )
+
+    @retry(
+        reraise=True,
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_openai_exception),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    def _invoke_retrieval_chain_with_retry(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Invoke RAG chain with retries for transient OpenAI failures."""
+        return self.retrieval_chain.invoke(payload)
+
+    @retry(
+        reraise=True,
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_openai_exception),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    def _invoke_suggestion_chain_with_retry(self, chain, payload: Dict[str, Any]):
+        """Invoke suggestion generation chain with retries for transient OpenAI failures."""
+        return chain.invoke(payload)
     
     def generate_response(
         self,
@@ -148,7 +202,7 @@ Please answer based ONLY on the resume context above. If the context doesn't con
                     chat_history.append(AIMessage(content=msg['content']))
         
         # Invoke the retrieval chain
-        result = self.retrieval_chain.invoke({
+        result = self._invoke_retrieval_chain_with_retry({
             "input": query,
             "chat_history": chat_history if chat_history else []
         })
@@ -220,7 +274,7 @@ Generate the 2 questions now:""")
             chain = suggestion_prompt | self.llm | parser
             
             # Generate suggestions
-            result = chain.invoke({
+            result = self._invoke_suggestion_chain_with_retry(chain, {
                 "context": context_string,
                 "format_instructions": parser.get_format_instructions()
             })

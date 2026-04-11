@@ -25,24 +25,24 @@ from app.config import Config
 
 def configure_logging() -> logging.Logger:
     """Configure structured logging to console and file."""
-    logger = logging.getLogger("portfolio_rag_backend")
-
-    if logger.handlers:
-        return logger
-
-    logger.setLevel(getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO))
+    root_logger = logging.getLogger()
+    log_level = getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO)
+    root_logger.setLevel(log_level)
 
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
+    if not root_logger.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
 
-    file_handler = logging.FileHandler(Config.LOG_FILE)
-    file_handler.setFormatter(formatter)
+        file_handler = logging.FileHandler(Config.LOG_FILE)
+        file_handler.setFormatter(formatter)
 
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-    logger.propagate = False
+        root_logger.addHandler(console_handler)
+        root_logger.addHandler(file_handler)
+
+    logger = logging.getLogger("portfolio_rag_backend")
+    logger.setLevel(log_level)
 
     return logger
 
