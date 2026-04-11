@@ -42,30 +42,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
   }
 }
 
-/**
- * Get or create a persistent session ID
- */
 function getSessionId() {
   let sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
-  
+
   if (!sessionId) {
-    // Generate a simple unique session ID (UUID-like)
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
   }
-  
+
   return sessionId;
 }
 
-/**
- * Send a message to the chatbot backend
- * @param {string} message - User's message
- * @returns {Promise<string>} - Assistant's reply
- * @throws {Error} - If request fails
- */
 export async function sendMessage(message) {
   const sessionId = getSessionId();
-  
+
   try {
     const response = await fetchWithTimeout(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -77,7 +67,7 @@ export async function sendMessage(message) {
         message,
       }),
     });
-    
+
     if (!response.ok) {
       throw buildApiError(
         `Chat request failed with status ${response.status}. Please try again.`,
@@ -85,10 +75,9 @@ export async function sendMessage(message) {
         response.status
       );
     }
-    
+
     const data = await response.json();
     return data.reply;
-    
   } catch (error) {
     console.error('Chat API error:', error);
 
@@ -103,14 +92,6 @@ export async function sendMessage(message) {
   }
 }
 
-/**
- * Fetch suggested questions from the backend
- * @param {Object} payload - Request payload
- * @param {string|null} payload.last_user_message - Last user message for context
- * @param {string|null} payload.conversation_summary - Summary of conversation
- * @returns {Promise<{suggestions: string[]}>} - Object with suggestions array
- * @throws {Error} - If request fails
- */
 export async function fetchSuggestions(payload = {}) {
   try {
     const response = await fetchWithTimeout(`${API_BASE_URL}/suggestions`, {
@@ -123,7 +104,7 @@ export async function fetchSuggestions(payload = {}) {
         conversation_summary: payload.conversation_summary || null,
       }),
     });
-    
+
     if (!response.ok) {
       throw buildApiError(
         `Suggestions request failed with status ${response.status}.`,
@@ -131,23 +112,19 @@ export async function fetchSuggestions(payload = {}) {
         response.status
       );
     }
-    
+
     const data = await response.json();
-    return data; // { suggestions: string[] }
-    
+    return data;
   } catch (error) {
     console.error('Suggestions API error:', error);
-    if (error?.code === 'TIMEOUT') {
-      console.warn('Suggestions request timed out after 30 seconds. Using fallback suggestions.');
+
+    if (error?.code === 'TIMEOUT' || error?.code === 'NETWORK_ERROR' || error?.code === 'HTTP_ERROR') {
+      throw error;
     }
-    
-    // Return fallback suggestions on error
-    return {
-      suggestions: [
-        "Can you tell me about your background?",
-        "What kind of experience do you have?"
-      ]
-    };
+
+    throw buildApiError(
+      'Something went wrong while loading suggestions. Please try again.',
+      'UNKNOWN_ERROR'
+    );
   }
 }
-

@@ -1,68 +1,76 @@
 import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { fetchSuggestions } from '../services/chatApi';
 
-/**
- * SuggestedQuestions Component (Memoized)
- * Displays clickable suggestion chips below the chat input
- * 
- * Wrapped with React.memo to prevent re-renders when parent updates unrelated state
- * Only re-renders when its own props change (lastUserMessage, refreshTrigger, onSuggestionClick)
- * 
- * Performance optimizations:
- * - React.memo: Prevents re-renders on parent re-renders
- * - Custom comparison: Deep comparison of props
- * - useCallback: Memoized handlers for suggestions
- * - useMemo: Memoized suggestion elements
- */
-const SuggestedQuestions = memo(({ 
-  lastUserMessage = null, 
-  onSuggestionClick, 
+const SUGGESTION_STATUS = {
+  IDLE: 'idle',
+  LOADING: 'loading',
+  SUCCESS: 'success',
+  ERROR: 'error',
+};
+
+const SuggestedQuestions = memo(({
+  lastUserMessage = null,
+  onSuggestionClick,
   isVisible = true,
-  refreshTrigger = 0 
+  refreshTrigger = 0,
+  isOnline = true,
 }) => {
   const [suggestions, setSuggestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState(SUGGESTION_STATUS.IDLE);
+  const [errorMessage, setErrorMessage] = useState(null);
 
-  // Fetch suggestions when component mounts or refreshTrigger changes
-  useEffect(() => {
+  const fallbackSuggestions = useMemo(() => [
+    'Can you tell me about your background?',
+    'How much work experience do you have?',
+  ], []);
+
+  const loadSuggestions = useCallback(async () => {
     if (!isVisible) return;
 
-    // Initial load - show hardcoded questions without calling LLM
-    if (lastUserMessage === null) {
-      setSuggestions([
-        "Can you tell me about your background?",
-        "How much work experience do you have?"
-      ]);
-      setIsLoading(false);
+    if (!isOnline) {
+      setSuggestions(fallbackSuggestions);
+      setStatus(SUGGESTION_STATUS.ERROR);
+      setErrorMessage('Suggestions are in offline mode. Showing defaults.');
       return;
     }
 
-    // After user has sent a message - use LLM to generate contextual suggestions
-    const loadSuggestions = async () => {
-      setIsLoading(true);
-      
-      try {
-        const data = await fetchSuggestions({
-          last_user_message: lastUserMessage,
-          conversation_summary: null, // Could be enhanced later
-        });
-        
-        setSuggestions(data.suggestions || []);
-      } catch (error) {
-        console.error('Failed to load suggestions:', error);
-        // fetchSuggestions already returns fallback on error
-      } finally {
-        setIsLoading(false);
+    if (lastUserMessage === null) {
+      setSuggestions(fallbackSuggestions);
+      setStatus(SUGGESTION_STATUS.SUCCESS);
+      setErrorMessage(null);
+      return;
+    }
+
+    setStatus(SUGGESTION_STATUS.LOADING);
+    setErrorMessage(null);
+
+    try {
+      const data = await fetchSuggestions({
+        last_user_message: lastUserMessage,
+        conversation_summary: null,
+      });
+
+      const nextSuggestions = data?.suggestions?.length ? data.suggestions : fallbackSuggestions;
+      setSuggestions(nextSuggestions);
+      setStatus(SUGGESTION_STATUS.SUCCESS);
+    } catch (error) {
+      setSuggestions(fallbackSuggestions);
+      setStatus(SUGGESTION_STATUS.ERROR);
+
+      if (error?.code === 'TIMEOUT') {
+        setErrorMessage('Suggestions timed out. Showing defaults.');
+      } else if (error?.code === 'NETWORK_ERROR') {
+        setErrorMessage('Cannot load suggestions right now. Showing defaults.');
+      } else {
+        setErrorMessage('Unable to refresh suggestions. Showing defaults.');
       }
-    };
+    }
+  }, [isVisible, isOnline, lastUserMessage, fallbackSuggestions]);
 
+  useEffect(() => {
     loadSuggestions();
-  }, [lastUserMessage, isVisible, refreshTrigger]);
+  }, [loadSuggestions, refreshTrigger]);
 
-  /**
-   * Memoized suggestion element creator
-   * Prevents recreating suggestion buttons on every render
-   */
   const suggestionElements = useMemo(() => {
     return suggestions.map((suggestion, index) => (
       <SuggestionChip
@@ -77,8 +85,18 @@ const SuggestedQuestions = memo(({
 
   return (
     <div className="suggested-questions">
-      {isLoading ? (
-        // Loading skeleton
+      {status === SUGGESTION_STATUS.ERROR && errorMessage && (
+        <div className="suggestions-error" role="alert">
+          <span className="suggestions-error-text">{errorMessage}</span>
+          {isOnline && (
+            <button type="button" className="suggestions-retry-button" onClick={loadSuggestions}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {status === SUGGESTION_STATUS.LOADING ? (
         <div className="suggestions-grid">
           {[1, 2].map((i) => (
             <div key={i} className="suggestion-chip suggestion-chip-skeleton">
@@ -94,23 +112,16 @@ const SuggestedQuestions = memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for React.memo
-  // Return true if props are equal (skip re-render), false if different (re-render)
   return (
     prevProps.lastUserMessage === nextProps.lastUserMessage &&
     prevProps.onSuggestionClick === nextProps.onSuggestionClick &&
     prevProps.isVisible === nextProps.isVisible &&
-    prevProps.refreshTrigger === nextProps.refreshTrigger
+    prevProps.refreshTrigger === nextProps.refreshTrigger &&
+    prevProps.isOnline === nextProps.isOnline
   );
 });
 
-/**
- * SuggestionChip Component (Memoized)
- * Individual clickable suggestion button
- * Memoized to prevent re-renders when sibling suggestions update
- */
 const SuggestionChip = memo(({ suggestion, onSuggestionClick }) => {
-  // Memoized click handler
   const handleClick = useCallback(() => {
     onSuggestionClick(suggestion);
   }, [suggestion, onSuggestionClick]);
@@ -126,7 +137,6 @@ const SuggestionChip = memo(({ suggestion, onSuggestionClick }) => {
     </button>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if suggestion text or callback changes
   return (
     prevProps.suggestion === nextProps.suggestion &&
     prevProps.onSuggestionClick === nextProps.onSuggestionClick

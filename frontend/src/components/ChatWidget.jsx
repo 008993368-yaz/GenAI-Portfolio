@@ -3,20 +3,18 @@ import { sendMessage } from '../services/chatApi';
 import ChatMessage from './ChatMessage';
 import SuggestedQuestions from './SuggestedQuestions';
 
-/**
- * ChatWidget Component
- * Main chat interface with optimized rendering using memoization
- * 
- * Performance optimizations:
- * - useCallback: Memoized event handlers to prevent child re-renders
- * - useMemo: Memoized message elements to avoid recreating on every render
- * - ChatMessage: Memoized child component prevents unnecessary re-renders
- */
+const CHAT_STATUS = {
+  IDLE: 'idle',
+  LOADING: 'loading',
+  SUCCESS: 'success',
+  ERROR: 'error',
+};
+
 const ChatWidget = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi, I'm Yazhini 👋 Ask me about my projects, skills, or experience.",
+      content: "Hi, I am Yazhini. Ask me about my projects, skills, or experience.",
     },
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -24,114 +22,165 @@ const ChatWidget = ({ isOpen, onClose }) => {
   const [lastUserMessage, setLastUserMessage] = useState(null);
   const [refreshSuggestions, setRefreshSuggestions] = useState(0);
   const [retryMessage, setRetryMessage] = useState(null);
+  const [chatStatus, setChatStatus] = useState(CHAT_STATUS.IDLE);
+  const [chatError, setChatError] = useState(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /**
-   * Memoized callback for sending messages
-   * Prevents unnecessary re-creation on every render
-   * Dependencies ensure it updates when needed
-   */
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setChatStatus((prev) => (prev === CHAT_STATUS.ERROR ? CHAT_STATUS.IDLE : prev));
+      setChatError(null);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setChatStatus(CHAT_STATUS.ERROR);
+      setChatError({
+        type: 'OFFLINE',
+        message: 'You are offline. Messages cannot be sent until your connection is restored.',
+        retryable: true,
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const mapErrorToUi = useCallback((error) => {
+    switch (error?.code) {
+      case 'TIMEOUT':
+        return {
+          type: 'TIMEOUT',
+          message: 'The request timed out. Please retry your last message.',
+          retryable: true,
+        };
+      case 'NETWORK_ERROR':
+        return {
+          type: 'NETWORK_ERROR',
+          message: 'Cannot reach the server. Check your internet connection and try again.',
+          retryable: true,
+        };
+      case 'HTTP_ERROR':
+        if (error?.status === 429) {
+          return {
+            type: 'RATE_LIMIT',
+            message: 'Too many requests right now. Please wait a moment and retry.',
+            retryable: true,
+          };
+        }
+        if ((error?.status || 0) >= 500) {
+          return {
+            type: 'SERVER_ERROR',
+            message: 'The server is having trouble. Please try again shortly.',
+            retryable: true,
+          };
+        }
+        return {
+          type: 'REQUEST_ERROR',
+          message: 'This request could not be processed. Please try again.',
+          retryable: true,
+        };
+      default:
+        return {
+          type: 'UNKNOWN_ERROR',
+          message: 'Something unexpected happened. Please try again.',
+          retryable: true,
+        };
+    }
+  }, []);
+
   const handleSendMessage = useCallback(async (messageText = null) => {
-    // Allow passing message text directly (for suggestion clicks)
     const userMessage = (messageText || inputValue).trim();
-    
+
     if (!userMessage || isLoading) return;
 
-    // Clear input only if it came from the input field
+    if (!isOnline) {
+      setChatStatus(CHAT_STATUS.ERROR);
+      setChatError({
+        type: 'OFFLINE',
+        message: 'You are offline. Reconnect to send messages.',
+        retryable: true,
+      });
+      setRetryMessage(userMessage);
+      return;
+    }
+
     if (!messageText) {
       setInputValue('');
     }
 
-    // Add user message to chat
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setLastUserMessage(userMessage);
     setRetryMessage(null);
+    setChatError(null);
     setIsLoading(true);
+    setChatStatus(CHAT_STATUS.LOADING);
 
     try {
-      // Call API
       const reply = await sendMessage(userMessage);
-      
-      // Add assistant reply
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
       setRetryMessage(null);
-      
-      // Refresh suggestions after assistant responds
       setRefreshSuggestions((prev) => prev + 1);
+      setChatStatus(CHAT_STATUS.SUCCESS);
     } catch (error) {
-      const isTimeout = error?.code === 'TIMEOUT';
-      const fallbackMessage = isTimeout
-        ? 'The request timed out after 30 seconds. You can retry your last message.'
-        : "Sorry - I'm having trouble connecting right now. Please try again.";
-
-      if (isTimeout) {
+      const uiError = mapErrorToUi(error);
+      if (uiError.retryable) {
         setRetryMessage(userMessage);
       }
 
-      // Add error message
+      setChatError(uiError);
+      setChatStatus(CHAT_STATUS.ERROR);
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: error?.message || fallbackMessage,
+          content: uiError.message,
         },
       ]);
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, isLoading]);
+  }, [inputValue, isLoading, isOnline, mapErrorToUi]);
 
-  /**
-   * Memoized callback for retrying the last message
-   * Prevents SuggestedQuestions from unnecessary re-renders
-   */
   const handleRetryLastMessage = useCallback(() => {
     if (!retryMessage || isLoading) return;
     handleSendMessage(retryMessage);
   }, [retryMessage, isLoading, handleSendMessage]);
 
-  /**
-   * Memoized callback for form submission
-   * Prevents inline function creation
-   */
+  const handleRetryBanner = useCallback(() => {
+    if (!retryMessage) return;
+    handleSendMessage(retryMessage);
+  }, [retryMessage, handleSendMessage]);
+
   const handleFormSubmit = useCallback((e) => {
     e.preventDefault();
     handleSendMessage();
   }, [handleSendMessage]);
 
-  /**
-   * Memoized callback for suggestion clicks
-   * Passed to SuggestedQuestions (memoized child) - prevents re-renders
-   */
   const handleSuggestionClick = useCallback((suggestion) => {
     handleSendMessage(suggestion);
   }, [handleSendMessage]);
 
-  /**
-   * Memoized callback for input changes
-   * Prevents SuggestedQuestions from re-rendering on input change
-   */
   const handleInputChange = useCallback((e) => {
     setInputValue(e.target.value);
   }, []);
 
-  /**
-   * Memoized callback for close action
-   */
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
 
-  /**
-   * Memoized message list rendering
-   * Avoids recreating message elements on every render
-   * Optimization for chats with many messages
-   */
   const messageElements = useMemo(() => {
     return messages.map((msg, index) => ({
       key: index,
@@ -143,42 +192,61 @@ const ChatWidget = ({ isOpen, onClose }) => {
     }));
   }, [messages, handleRetryLastMessage]);
 
+  const statusLabel = useMemo(() => {
+    if (!isOnline) return 'Offline';
+    if (chatStatus === CHAT_STATUS.LOADING) return 'Sending...';
+    if (chatStatus === CHAT_STATUS.ERROR) return 'Error';
+    if (chatStatus === CHAT_STATUS.SUCCESS) return 'Connected';
+    return 'Ready';
+  }, [chatStatus, isOnline]);
+
   if (!isOpen) return null;
 
   return (
     <div className="chat-widget">
-      {/* Header */}
       <div className="chat-header">
         <div className="chat-header-title">
-          <span className="chat-header-icon">💬</span>
+          <span className="chat-header-icon">AI</span>
           <span className="chat-header-text">Yazhini AI</span>
         </div>
-        <button 
-          className="chat-close-button" 
+        <button
+          className="chat-close-button"
           onClick={handleClose}
           aria-label="Close chat"
         >
-          ✕
+          x
         </button>
       </div>
 
-      {/* Messages Area */}
+      <div className="chat-status-bar" role="status" aria-live="polite">
+        <span className={`chat-status-dot ${isOnline ? 'chat-status-online' : 'chat-status-offline'}`} />
+        <span className="chat-status-text">{statusLabel}</span>
+      </div>
+
+      {chatStatus === CHAT_STATUS.ERROR && chatError && (
+        <div className="chat-error-banner" role="alert">
+          <p className="chat-error-text">{chatError.message}</p>
+          {chatError.retryable && retryMessage && (
+            <button type="button" className="chat-error-retry" onClick={handleRetryBanner}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="chat-messages">
-        {/* Render memoized ChatMessage components */}
         {messageElements.map((msgProps) => (
           <ChatMessage key={msgProps.key} {...msgProps} />
         ))}
-        
-        {/* Loading indicator */}
+
         {isLoading && (
-          <ChatMessage 
-            role="assistant" 
-            content="Typing..." 
+          <ChatMessage
+            role="assistant"
+            content="Typing..."
             isLoading={true}
           />
         )}
 
-        {/* Retry message (timeout state) */}
         {retryMessage && !isLoading && (
           <ChatMessage
             role="assistant"
@@ -187,33 +255,32 @@ const ChatWidget = ({ isOpen, onClose }) => {
             onRetry={handleRetryLastMessage}
           />
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <form className="chat-input-form" onSubmit={handleFormSubmit}>
-        {/* Suggested Questions - Memoized component receives stable callback */}
         <SuggestedQuestions
           lastUserMessage={lastUserMessage}
           onSuggestionClick={handleSuggestionClick}
           isVisible={!isLoading}
           refreshTrigger={refreshSuggestions}
+          isOnline={isOnline}
         />
-        
+
         <div style={{ display: 'flex', gap: '10px' }}>
           <input
             type="text"
             className="chat-input"
-            placeholder="Ask me anything..."
+            placeholder={isOnline ? 'Ask me anything...' : 'You are offline. Reconnect to continue...'}
             value={inputValue}
             onChange={handleInputChange}
-            disabled={isLoading}
+            disabled={isLoading || !isOnline}
           />
           <button
             type="submit"
             className="chat-send-button"
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || !inputValue.trim() || !isOnline}
             aria-label="Send message"
           >
             <svg
