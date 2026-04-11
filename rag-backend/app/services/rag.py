@@ -22,6 +22,11 @@ from app.services.retriever import ResumeRetriever, RetrieverConfig
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SUGGESTION_FALLBACK = [
+    "Can you tell me about your background?",
+    "What kind of experience do you have?",
+]
+
 
 def _is_retryable_openai_exception(exc: BaseException) -> bool:
     """Return True for transient OpenAI/network errors that should be retried."""
@@ -51,7 +56,7 @@ def _is_retryable_openai_exception(exc: BaseException) -> bool:
 
 class SuggestedQuestions(BaseModel):
     """Schema for suggested questions output"""
-    questions: List[str] = Field(description="List of 2 suggested questions")
+    questions: List[str] = Field(description=f"List of {config.DEFAULT_RAG_SUGGESTION_COUNT} suggested questions")
 
 
 class RAGConfig:
@@ -118,7 +123,7 @@ Remember: Accuracy over completeness. If you're not sure, say so."""
         self.llm = ChatOpenAI(
             model=config.openai_model,
             openai_api_key=config.openai_api_key,
-            temperature=0.7,
+            temperature=config.DEFAULT_RAG_TEMPERATURE,
         )
         
         # Create prompt template for RAG
@@ -147,8 +152,12 @@ Please answer based ONLY on the resume context above. If the context doesn't con
 
     @retry(
         reraise=True,
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(config.DEFAULT_RAG_RETRY_ATTEMPTS),
+        wait=wait_exponential(
+            multiplier=config.DEFAULT_RAG_RETRY_WAIT_MULTIPLIER,
+            min=config.DEFAULT_RAG_RETRY_WAIT_MIN_SECONDS,
+            max=config.DEFAULT_RAG_RETRY_WAIT_MAX_SECONDS,
+        ),
         retry=retry_if_exception(_is_retryable_openai_exception),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
@@ -158,8 +167,12 @@ Please answer based ONLY on the resume context above. If the context doesn't con
 
     @retry(
         reraise=True,
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(config.DEFAULT_RAG_RETRY_ATTEMPTS),
+        wait=wait_exponential(
+            multiplier=config.DEFAULT_RAG_RETRY_WAIT_MULTIPLIER,
+            min=config.DEFAULT_RAG_RETRY_WAIT_MIN_SECONDS,
+            max=config.DEFAULT_RAG_RETRY_WAIT_MAX_SECONDS,
+        ),
         retry=retry_if_exception(_is_retryable_openai_exception),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
@@ -246,78 +259,71 @@ Please answer based ONLY on the resume context above. If the context doesn't con
         request_id: Optional[str] = None
     ) -> List[str]:
         """
-        Generate 2 contextually relevant suggested questions using LangChain
-        
+        Generate contextually relevant suggested questions using LangChain.
+
         Args:
             last_user_message: Most recent user message for context
             conversation_summary: Summary of the conversation so far
             request_id: Request ID for tracing
-            
+
         Returns:
-            List of 2 suggested questions
+            List of suggested questions
         """
+        import re
         import time
+
         req_id = request_id or "N/A"
         gen_start = time.perf_counter()
-        # Default fallback suggestions
-        fallback = [
-            "Can you tell me about your background?",
-            "What kind of experience do you have?"
-        ]
-        
+        fallback = DEFAULT_SUGGESTION_FALLBACK
+
         try:
-            # Determine query for context retrieval
             retrieval_query = (
-                last_user_message or 
-                conversation_summary or 
+                last_user_message or
+                conversation_summary or
                 "portfolio overview"
             )
-            
-            # Retrieve context using the retriever
+
             docs = self.retriever.invoke(retrieval_query)
-            
-            # Build context string
+
             context_parts = []
-            for i, doc in enumerate(docs[:4], 1):
+            for i, doc in enumerate(docs[:config.DEFAULT_SUGGESTION_CONTEXT_DOC_LIMIT], 1):
                 context_parts.append(f"[Context {i}]\n{doc.page_content}\n")
             context_string = "\n".join(context_parts) if context_parts else "No context available."
-            
-            # Create output parser
+
             parser = JsonOutputParser(pydantic_object=SuggestedQuestions)
-            
-            # Create prompt template for suggestions
+
             suggestion_prompt = ChatPromptTemplate.from_messages([
-                ("human", """Based on the following resume context, generate EXACTLY 2 simple HR screening questions that a recruiter might ask a candidate.
+                (
+                    "human",
+                    f"""Based on the following resume context, generate EXACTLY {config.DEFAULT_RAG_SUGGESTION_COUNT} simple HR screening questions that a recruiter might ask a candidate.
 
 RESUME CONTEXT:
-{context}
+{{context}}
 
 REQUIREMENTS:
 1. Questions should sound like typical HR interview questions (experience, background, skills overview)
 2. Keep questions conversational and non-technical
-3. Each question should be 5-10 words long
+3. Each question should be {config.DEFAULT_SUGGESTION_WORD_COUNT_MIN}-{config.DEFAULT_SUGGESTION_WORD_COUNT_MAX} words long
 4. NO personal sensitive information (phone, address, age, etc.)
 5. Questions should be broad and open-ended
 6. Examples: "Tell me about yourself", "What's your background?", "Walk me through your experience"
 
-{format_instructions}
+{{format_instructions}}
 
-Generate the 2 questions now:""")
+Generate the {config.DEFAULT_RAG_SUGGESTION_COUNT} questions now:""",
+                )
             ])
-            
-            # Create chain with output parser
+
             chain = suggestion_prompt | self.llm | parser
-            
-            # Generate suggestions
+
             result = self._invoke_suggestion_chain_with_retry(chain, {
                 "context": context_string,
-                "format_instructions": parser.get_format_instructions()
+                "format_instructions": parser.get_format_instructions(),
             })
-            
+
             gen_ms = (time.perf_counter() - gen_start) * 1000
             logger.info("[%s] Suggestion generation completed in %.2f ms", req_id, gen_ms)
-            
-            # Extract and validate questions
+
             if isinstance(result, dict) and "questions" in result:
                 questions = result["questions"]
             elif isinstance(result, list):
@@ -325,29 +331,27 @@ Generate the 2 questions now:""")
             else:
                 logger.warning("[%s] Unexpected suggestion format, returning fallback", req_id)
                 return fallback
-            
-            # Clean and validate
+
             cleaned = []
-            for q in questions[:2]:  # Take only first 2
-                if isinstance(q, str) and 5 <= len(q) <= 120:
-                    # Remove numbering and bullets
-                    import re
-                    q = re.sub(r'^\d+[\.\)]\s*', '', q.strip())
-                    q = re.sub(r'^[-•]\s*', '', q)
-                    if q:
-                        cleaned.append(q)
-            
+            for q in questions[:config.DEFAULT_RAG_SUGGESTION_COUNT]:
+                if isinstance(q, str):
+                    word_count = len(q.split())
+                    if config.DEFAULT_SUGGESTION_WORD_COUNT_MIN <= word_count <= config.DEFAULT_SUGGESTION_WORD_COUNT_MAX:
+                        q = re.sub(r'^\d+[\.\)]\s*', '', q.strip())
+                        q = re.sub(r'^[-•]\s*', '', q)
+                        if q:
+                            cleaned.append(q)
+
             logger.debug("[%s] Generated %d valid suggestions from %d candidates", req_id, len(cleaned), len(questions))
-            
-            # Return cleaned or fallback
-            if len(cleaned) >= 2:
-                return cleaned[:2]
-            elif len(cleaned) == 1:
+
+            if len(cleaned) >= config.DEFAULT_RAG_SUGGESTION_COUNT:
+                return cleaned[:config.DEFAULT_RAG_SUGGESTION_COUNT]
+            if len(cleaned) == 1:
                 return cleaned + [fallback[1]]
-            else:
-                logger.info("[%s] Could not generate valid suggestions, returning fallback", req_id)
-                return fallback
-                
+
+            logger.info("[%s] Could not generate valid suggestions, returning fallback", req_id)
+            return fallback
+
         except Exception as e:
             gen_ms = (time.perf_counter() - gen_start) * 1000
             logger.error(

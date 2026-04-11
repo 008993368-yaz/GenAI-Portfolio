@@ -26,9 +26,9 @@ class SessionMemory:
     
     def __init__(
         self,
-        max_messages_per_session: int = 10,
-        session_ttl_seconds: int = 3600,
-        cleanup_interval_seconds: int = 300,
+        max_messages_per_session: int = config.DEFAULT_SESSION_MAX_MESSAGES_PER_SESSION,
+        session_ttl_seconds: int = config.DEFAULT_SESSION_TTL_SECONDS,
+        cleanup_interval_seconds: int = config.DEFAULT_SESSION_CLEANUP_INTERVAL_SECONDS,
     ):
         """
         Initialize session memory manager
@@ -38,8 +38,8 @@ class SessionMemory:
             session_ttl_seconds: Session time to live in seconds
             cleanup_interval_seconds: Interval between cleanup sweeps in seconds
         """
-        # Convert to message window size (divide by 2 since each exchange is user+AI)
-        self.k = max(1, max_messages_per_session // 2)
+        # Convert to message window size based on the configured user+assistant exchange size.
+        self.k = max(1, max_messages_per_session // config.DEFAULT_MESSAGES_PER_EXCHANGE)
         self._session_ttl_seconds = max(1, session_ttl_seconds)
         self._cleanup_interval_seconds = max(1, cleanup_interval_seconds)
 
@@ -267,7 +267,7 @@ def get_memory() -> SessionMemory:
     global _memory
     if _memory is None:
         _memory = SessionMemory(
-            max_messages_per_session=10,
+            max_messages_per_session=config.DEFAULT_SESSION_MAX_MESSAGES_PER_SESSION,
             session_ttl_seconds=config.SESSION_TTL,
             cleanup_interval_seconds=config.SESSION_CLEANUP_INTERVAL,
         )

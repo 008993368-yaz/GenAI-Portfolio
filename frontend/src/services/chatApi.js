@@ -2,9 +2,13 @@
  * Chat API service for communicating with FastAPI backend
  */
 
+import {
+  CHAT_REQUEST_TIMEOUT_MS,
+  SESSION_ID_RANDOM_SUFFIX_LENGTH,
+} from '../constants';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const SESSION_STORAGE_KEY = 'portfolio_chat_session_id';
-const REQUEST_TIMEOUT_MS = 30_000;
 
 function ensureOnline() {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -22,7 +26,7 @@ function buildApiError(message, code, status = null) {
   return error;
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = CHAT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -37,7 +41,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
   } catch (error) {
     if (error.name === 'AbortError') {
       throw buildApiError(
-        'Request timed out after 30 seconds. Please check your connection and try again.',
+        `Request timed out after ${CHAT_REQUEST_TIMEOUT_MS / 1000} seconds. Please check your connection and try again.`,
         'TIMEOUT'
       );
     }
@@ -55,7 +59,7 @@ function getSessionId() {
   let sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
 
   if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 2 + SESSION_ID_RANDOM_SUFFIX_LENGTH)}`;
     localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
   }
 
