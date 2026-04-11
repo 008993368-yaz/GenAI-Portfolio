@@ -1,11 +1,10 @@
-const Footer = () => {
-  return (
-    <footer className="footer">
-      <div className="container">
-        <p>&copy; 2026 Yazhini Elanchezhian. All rights reserved.</p>
-      </div>
-    </footer>
-  );
-};
+const Footer = () => (
+  <footer className="site-footer">
+    <p>Crafted by Yazhini Elanchezhian.</p>
+    <a href="mailto:yazhini.elanchezhian3368@coyote.csusb.edu" className="magnetic">
+      Let&apos;s collaborate
+    </a>
+  </footer>
+);
 
 export default Footer;
