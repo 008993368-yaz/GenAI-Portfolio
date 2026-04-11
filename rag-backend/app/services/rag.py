@@ -125,17 +125,17 @@ class RAGPipeline:
 
 Remember: Accuracy over completeness. If you're not sure, say so."""
     
-    def __init__(self, config: RAGConfig):
-        self.config = config
+    def __init__(self, rag_config: RAGConfig):
+        self.config = rag_config
         
         # Initialize retriever
-        self.retriever_instance = ResumeRetriever(config.retriever_config)
-        self.retriever = self.retriever_instance.get_retriever(k=config.rag_top_k)
+        self.retriever_instance = ResumeRetriever(rag_config.retriever_config)
+        self.retriever = self.retriever_instance.get_retriever(k=rag_config.rag_top_k)
         
         # Initialize OpenAI LLM
         self.llm = ChatOpenAI(
-            model=config.openai_model,
-            openai_api_key=config.openai_api_key,
+            model=rag_config.openai_model,
+            openai_api_key=rag_config.openai_api_key,
             temperature=config.DEFAULT_RAG_TEMPERATURE,
         )
         
