@@ -365,6 +365,24 @@ async def get_info():
     }
 
 
+@app.get("/metrics")
+async def get_metrics():
+    """Get system metrics (session management and embedding cache)"""
+    from app.services.memory import get_memory
+    from app.services.retriever import get_retriever
+    
+    session_memory = get_memory()
+    session_metrics = session_memory.get_metrics() if session_memory else {}
+    
+    retriever, error = get_retriever()
+    cache_metrics = retriever.get_cache_metrics() if retriever else {}
+    
+    return {
+        "session_metrics": session_metrics,
+        "embedding_cache_metrics": cache_metrics,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
