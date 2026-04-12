@@ -10,6 +10,7 @@ import ProjectGrid from './components/projects/ProjectGrid';
 import ExperienceSection from './components/ExperienceSection';
 import EducationSection from './components/EducationSection';
 import Footer from './components/Footer';
+import ChatWidget from './components/ai/ChatWidget';
 import { portfolioData } from './data/portfolioData';
 import { navLinks } from './data/navigation';
 import { useScrollSpy } from './hooks/useScrollSpy';
@@ -47,6 +48,7 @@ function App() {
         <div className="hero-grid">
           <HeroText name={portfolioData.personalInfo.name} onPrimaryClick={() => handleNavClick('projects')} />
         </div>
+        <ChatWidget />
         <ScrollIndicator onClick={() => handleNavClick('skills')} />
       </section>
 
