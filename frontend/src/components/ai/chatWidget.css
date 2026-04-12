@@ -1,0 +1,199 @@
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.chat-widget {
+  position: absolute;
+  right: clamp(1rem, 4vw, 2.5rem);
+  bottom: clamp(4.5rem, 9vh, 7rem);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.8rem;
+}
+
+.chat-widget__trigger,
+.chat-widget__ghost-button,
+.chat-widget__chip,
+.chat-widget__composer button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.78);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.chat-widget__trigger {
+  padding: 0.72rem 1.15rem;
+  box-shadow: var(--shadow-neon);
+}
+
+.chat-widget__trigger:hover,
+.chat-widget__ghost-button:hover,
+.chat-widget__chip:hover,
+.chat-widget__composer button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 229, 255, 0.65);
+}
+
+.chat-widget__panel {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(75vh, 42rem);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(140% 120% at 95% 5%, rgba(0, 229, 255, 0.11), transparent 50%),
+    rgba(9, 10, 15, 0.93);
+  backdrop-filter: blur(10px);
+  scrollbar-color: rgba(0, 229, 255, 0.65) rgba(16, 16, 16, 0.4);
+  scrollbar-width: thin;
+}
+
+.chat-widget__panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-widget__panel::-webkit-scrollbar-track {
+  background: rgba(16, 16, 16, 0.4);
+  border-radius: 10px;
+}
+
+.chat-widget__panel::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 229, 255, 0.8), rgba(0, 102, 255, 0.6));
+  border-radius: 10px;
+  border: 2px solid rgba(16, 16, 16, 0.4);
+}
+
+.chat-widget__panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0, 229, 255, 1), rgba(0, 102, 255, 0.8));
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+.chat-widget__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.chat-widget__header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.chat-widget__header p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.chat-widget__ghost-button {
+  padding: 0.4rem 0.72rem;
+  font-size: 0.78rem;
+}
+
+.chat-widget__messages {
+  overflow-y: auto;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chat-widget__message {
+  padding: 0.58rem 0.72rem;
+  border-radius: 0.75rem;
+  line-height: 1.4;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.chat-widget__message--assistant {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.chat-widget__message--user {
+  background: rgba(0, 102, 255, 0.26);
+  justify-self: end;
+}
+
+.chat-widget__status {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.8rem;
+}
+
+.chat-widget__error {
+  margin: 0;
+  color: #ff8b8b;
+  font-size: 0.82rem;
+}
+
+.chat-widget__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.chat-widget__chip {
+  font-size: 0.74rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.chat-widget__composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.chat-widget__composer input {
+  border-radius: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+  padding: 0.65rem 0.72rem;
+  min-width: 0;
+}
+
+.chat-widget__composer input:focus {
+  outline: 2px solid rgba(0, 229, 255, 0.45);
+  outline-offset: 1px;
+}
+
+.chat-widget__composer button {
+  padding: 0.58rem 0.95rem;
+}
+
+.chat-widget__composer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .chat-widget {
+    left: 1rem;
+    right: 1rem;
+    bottom: 5.5rem;
+    align-items: stretch;
+  }
+
+  .chat-widget__panel {
+    width: 100%;
+    max-height: 68vh;
+  }
+
+  .chat-widget__trigger {
+    width: 100%;
+  }
+}
