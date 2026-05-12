@@ -9,7 +9,6 @@
 }
 
 .hero-cta,
-.menu-trigger,
 .filter-pill.is-active {
   animation: pulseGlow 3.4s ease-in-out infinite;
 }
