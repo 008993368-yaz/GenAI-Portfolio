@@ -13,8 +13,13 @@ const EducationSection = ({ education }) => (
           className="education-card"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.03 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.45, delay: index * 0.08 }}
+          transition={{
+            opacity: { duration: 0.45, delay: index * 0.08 },
+            y: { duration: 0.45, delay: index * 0.08 },
+            scale: { type: 'spring', stiffness: 240, damping: 20 },
+          }}
         >
           <h3>{item.degree}</h3>
           <p>{item.institution}</p>
