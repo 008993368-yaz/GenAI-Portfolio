@@ -71,36 +71,6 @@ a {
   top: 0.8rem;
 }
 
-.ambient-layer {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.ambient-orb {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(90px);
-  opacity: 0.35;
-}
-
-.ambient-orb--cyan {
-  width: min(32rem, 55vw);
-  height: min(32rem, 55vw);
-  top: 18%;
-  right: 8%;
-  background: radial-gradient(circle, rgba(0, 229, 255, 0.65), transparent 70%);
-}
-
-.ambient-orb--magenta {
-  width: min(30rem, 52vw);
-  height: min(30rem, 52vw);
-  bottom: 8%;
-  left: -8%;
-  background: radial-gradient(circle, rgba(255, 0, 229, 0.5), transparent 70%);
-}
-
 .nav-root {
   position: fixed;
   top: 1.6rem;
