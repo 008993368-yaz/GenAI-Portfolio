@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import Navbar from './components/nav/Navbar';
 import HeroText from './components/hero/HeroText';
 import ScrollIndicator from './components/hero/ScrollIndicator';
@@ -21,10 +21,6 @@ function App() {
   const sectionIds = useMemo(() => navLinks.map((link) => link.id), []);
   const activeSection = useScrollSpy(sectionIds);
   const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-
-  const slowParallax = useTransform(scrollYProgress, [0, 1], [0, reducedMotion ? 0 : -160]);
-  const mediumParallax = useTransform(scrollYProgress, [0, 1], [0, reducedMotion ? 0 : -280]);
 
   const handleNavClick = (sectionId) => {
     const section = document.getElementById(sectionId);
@@ -33,11 +29,6 @@ function App() {
 
   return (
     <SmoothScroll>
-      <div className="ambient-layer">
-        <motion.div className="ambient-orb ambient-orb--cyan" style={{ y: slowParallax }} />
-        <motion.div className="ambient-orb ambient-orb--magenta" style={{ y: mediumParallax }} />
-      </div>
-
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>

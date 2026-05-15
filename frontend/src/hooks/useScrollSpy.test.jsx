@@ -73,7 +73,7 @@ describe('useScrollSpy', () => {
     delete window.IntersectionObserver;
 
     const nav = document.createElement('nav');
-    nav.className = 'nav';
+    nav.className = 'nav-root';
     Object.defineProperty(nav, 'offsetHeight', {
       configurable: true,
       value: 50,

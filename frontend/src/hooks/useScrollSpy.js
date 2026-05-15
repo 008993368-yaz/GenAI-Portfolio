@@ -5,7 +5,7 @@ export const useScrollSpy = (sectionIds) => {
 
   useEffect(() => {
     const getCurrentSectionFromScroll = () => {
-      const navHeight = document.querySelector('.nav')?.offsetHeight || 0;
+      const navHeight = document.querySelector('.nav-root')?.offsetHeight || 0;
       let currentSection = sectionIds[0] || 'home';
 
       for (const sectionId of sectionIds) {
@@ -25,7 +25,7 @@ export const useScrollSpy = (sectionIds) => {
     };
 
     if ('IntersectionObserver' in window) {
-      const navHeight = document.querySelector('.nav')?.offsetHeight || 0;
+      const navHeight = document.querySelector('.nav-root')?.offsetHeight || 0;
       const sections = sectionIds
         .map((sectionId) => document.getElementById(sectionId))
         .filter(Boolean);
@@ -57,14 +57,28 @@ export const useScrollSpy = (sectionIds) => {
       return () => observer.disconnect();
     }
 
-    const handleScroll = () => {
+    let frameId = null;
+
+    const updateActiveSection = () => {
+      frameId = null;
       setActiveSection(getCurrentSectionFromScroll());
     };
 
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Set initial state
+    const handleScroll = () => {
+      if (frameId === null) {
+        frameId = window.requestAnimationFrame(updateActiveSection);
+      }
+    };
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    updateActiveSection();
+
+    return () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [sectionIds]);
 
   return activeSection;
