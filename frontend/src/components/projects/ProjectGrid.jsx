@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProjectCard from './ProjectCard';
 
@@ -9,6 +9,7 @@ const normalizeFilter = (tech) => tech?.split(',')[0]?.trim() || 'Other';
 const ProjectGrid = ({ projects }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeProject, setActiveProject] = useState(null);
+  const modalTriggerRef = useRef(null);
 
   const filters = useMemo(() => ['All', ...new Set(projects.map((project) => normalizeFilter(project.tech)))], [projects]);
 
@@ -26,6 +27,19 @@ const ProjectGrid = ({ projects }) => {
       node.style.removeProperty('transform');
     });
   }, [filteredProjects]);
+
+  const openProject = useCallback((project, trigger) => {
+    modalTriggerRef.current = trigger;
+    setActiveProject(project);
+  }, []);
+
+  const closeProject = useCallback(() => {
+    setActiveProject(null);
+
+    if (modalTriggerRef.current?.isConnected) {
+      modalTriggerRef.current.focus();
+    }
+  }, []);
 
   return (
     <section id="projects" className="section projects-section">
@@ -49,12 +63,12 @@ const ProjectGrid = ({ projects }) => {
 
       <div className="project-grid">
         {filteredProjects.map((project) => (
-          <ProjectCard key={project.id} project={project} onOpen={setActiveProject} />
+          <ProjectCard key={project.id} project={project} onOpen={openProject} />
         ))}
       </div>
 
       <Suspense fallback={null}>
-        <ProjectModal project={activeProject} onClose={() => setActiveProject(null)} />
+        <ProjectModal project={activeProject} onClose={closeProject} />
       </Suspense>
     </section>
   );
