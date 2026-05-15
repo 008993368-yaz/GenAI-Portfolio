@@ -7,16 +7,12 @@ const makeSkillItems = (content) =>
     return { label, index };
   });
 
-const EXCLUDED_TITLES = new Set(['testing', 'bi & automation']);
-
 const SkillsSection = ({ skills }) => {
   const groups = useMemo(() => {
-    return skills
-      .filter((group) => !EXCLUDED_TITLES.has(group.title.trim().toLowerCase()))
-      .map((group) => ({
-        ...group,
-        items: makeSkillItems(group.content),
-      }));
+    return skills.map((group) => ({
+      ...group,
+      items: makeSkillItems(group.content),
+    }));
   }, [skills]);
 
   const [activeId, setActiveId] = useState(groups[0]?.id ?? null);

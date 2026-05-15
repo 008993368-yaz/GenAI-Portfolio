@@ -7,7 +7,7 @@ const ProjectCard = ({ project, onOpen }) => {
       whileHover={{ scale: 1.03 }}
       transition={{ type: 'spring', stiffness: 240, damping: 20 }}
     >
-      <button type="button" className="project-card__button" onClick={() => onOpen(project)}>
+      <button type="button" className="project-card__button" onClick={(event) => onOpen(project, event.currentTarget)}>
         <div className="project-card__body">
           <h3>{project.title}</h3>
           <p>{project.description}</p>

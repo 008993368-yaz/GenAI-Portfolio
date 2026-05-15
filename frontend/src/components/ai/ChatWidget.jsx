@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { chatWithPortfolio, getSuggestions } from '../../services/chatApi';
 import './chatWidget.css';
 
@@ -29,6 +29,10 @@ function getOrCreateSessionId() {
 }
 
 function ChatWidget() {
+  const triggerRef = useRef(null);
+  const inputRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const messagesEndRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -48,6 +52,23 @@ function ChatWidget() {
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const firstUsableControl = inputRef.current || closeButtonRef.current;
+    firstUsableControl?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [isOpen, messages, isSending, errorMessage]);
 
   const canSend = useMemo(() => {
     return inputValue.trim().length > 0 && !isSending && !!sessionId;
@@ -133,6 +154,23 @@ function ChatWidget() {
     await sendMessage(suggestion);
   };
 
+  const closePanel = ({ returnFocus = false } = {}) => {
+    setIsOpen(false);
+
+    if (returnFocus) {
+      triggerRef.current?.focus();
+    }
+  };
+
+  const handlePanelKeyDown = (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+
+    event.preventDefault();
+    closePanel({ returnFocus: true });
+  };
+
   return (
     <div className="chat-widget" aria-live="polite">
       {isOpen && (
@@ -140,6 +178,7 @@ function ChatWidget() {
           id="portfolio-assistant-panel"
           className="chat-widget__panel"
           aria-label="Portfolio assistant chat panel"
+          onKeyDown={handlePanelKeyDown}
         >
           <header className="chat-widget__header">
             <div>
@@ -147,9 +186,10 @@ function ChatWidget() {
               <p>Ask about projects, skills, and experience</p>
             </div>
             <button
+              ref={closeButtonRef}
               type="button"
               className="chat-widget__ghost-button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => closePanel()}
               aria-label="Close chat"
             >
               Close
@@ -168,6 +208,7 @@ function ChatWidget() {
 
             {isSending && <p className="chat-widget__status">Thinking...</p>}
             {errorMessage && <p className="chat-widget__error">{errorMessage}</p>}
+            <div ref={messagesEndRef} className="chat-widget__messages-end" aria-hidden="true" />
           </div>
 
           <div className="chat-widget__suggestions">
@@ -189,6 +230,7 @@ function ChatWidget() {
               Message portfolio assistant
             </label>
             <input
+              ref={inputRef}
               id="portfolio-chat-input"
               type="text"
               value={inputValue}
@@ -204,6 +246,7 @@ function ChatWidget() {
       )}
 
       <button
+        ref={triggerRef}
         type="button"
         className="chat-widget__trigger"
         onClick={() => setIsOpen((prev) => !prev)}

@@ -1,9 +1,9 @@
 export const portfolioData = {
   personalInfo: {
     name: "YAZHINI ELANCHEZHIAN",
-    location: "📍 Redlands, CA",
-    phone: "📞 +1 909-871-6890",
-    email: "📧 yazhini.elanchezhian3368@coyote.csusb.edu",
+    location: "Redlands, CA",
+    phone: "+1 909-871-6890",
+    email: "yazhini.elanchezhian3368@coyote.csusb.edu",
     initials: "YE"
   },
   
@@ -60,7 +60,7 @@ export const portfolioData = {
       ],
       githubUrl: "https://github.com/008993368-yaz/landing-page-yz",
       gradient: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-      icon: "🤖",
+      icon: "AI",
       visual: ["circle", "bar", "chart"],
       reverse: false
     },
@@ -76,7 +76,7 @@ export const portfolioData = {
       ],
       githubUrl: "https://github.com/DrAlzahrani2025Projects/team1f25",
       gradient: "linear-gradient(135deg, #134e5e 0%, #71b280 100%)",
-      icon: "📚",
+      icon: "Books",
       visual: ["book", "search", "data"],
       reverse: true
     }
