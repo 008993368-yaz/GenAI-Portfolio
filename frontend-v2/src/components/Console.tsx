@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { profile } from "../data/profile";
 import { useChat } from "../hooks/useChat";
+import { useTypewriter } from "../hooks/useTypewriter";
 import styles from "./Console.module.css";
 
 const skillCount = profile.skills.reduce((n, g) => n + g.items.length, 0);
@@ -65,6 +66,11 @@ export default function Console() {
 
   const verbs = profile.hero.headVerbs;
   const thinking = exchange.status === "thinking";
+
+  // Type the answer out character by character once it arrives.
+  const { shown: typedReply, done: typedDone } = useTypewriter(
+    exchange.status === "done" ? exchange.reply : ""
+  );
 
   return (
     <section className={styles.hero} id="top" ref={root}>
@@ -133,10 +139,20 @@ export default function Console() {
               {exchange.status === "done" && (
                 <span className={styles.answer}>
                   <span className={styles.qline}>› {exchange.query}</span>
-                  <span className={styles.replyLine}>↳ {exchange.reply}</span>
-                  <span className={styles.meta}>
-                    replied in <b>{exchange.ms}ms</b>
+                  <span className={styles.replyLine}>
+                    {/* Visible typing is decorative; screen readers get one
+                        clean copy of the full reply via the sr-only span. */}
+                    <span aria-hidden="true">
+                      ↳ {typedReply}
+                      {!typedDone && <span className={styles.caret} />}
+                    </span>
+                    <span className={styles.srOnly}>↳ {exchange.reply}</span>
                   </span>
+                  {typedDone && (
+                    <span className={styles.meta}>
+                      replied in <b>{exchange.ms}ms</b>
+                    </span>
+                  )}
                 </span>
               )}
               {exchange.status === "error" && (
