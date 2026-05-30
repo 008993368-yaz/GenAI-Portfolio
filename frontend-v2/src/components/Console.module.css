@@ -181,6 +181,34 @@
   min-height: 1.4em;
 }
 
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 10rem;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.qline {
+  color: var(--text-mid);
+}
+
+.replyLine {
+  color: var(--text);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.meta {
+  color: var(--text-faint);
+}
+
+.meta b {
+  color: var(--signal);
+  font-weight: 500;
+}
+
 .readout b {
   color: var(--signal);
   font-weight: 500;
