@@ -22,7 +22,8 @@
 | `frontend-v2/src/hooks/useSearch.ts` | **Deleted** (replaced by useChat) |
 | `frontend-v2/src/components/Console.tsx` | Hero UI rewired to chat |
 | `frontend-v2/src/components/Console.module.css` | Multi-line answer readout + thinking state |
-| `frontend-v2/.env.example` | Documents `VITE_API_BASE_URL` for production |
+| `frontend-v2/.env.example` | Documents `VITE_API_BASE_URL` (committed) |
+| `frontend-v2/.env` | Points dev at the deployed backend (gitignored) |
 
 **Note on commands:** all paths below are relative to the repo root `c:\Users\yazhi\OneDrive\Desktop\Frontend\landing-page-yz`. Run `npm` commands from inside `frontend-v2`.
 
@@ -596,24 +597,47 @@ git commit -m "style(frontend-v2): answer readout and thinking state"
 
 ---
 
-## Task 7: Document the production API base URL
+## Task 7: Configure the API base URL
+
+We point frontend-v2 at the **already-deployed** backend (the same one v1 uses,
+per `frontend/.env`), so development/verification needs no local backend. The
+real URL lives in a gitignored `.env`; `.env.example` documents the knob.
 
 **Files:**
-- Create: `frontend-v2/.env.example`
+- Create: `frontend-v2/.env.example` (committed)
+- Create: `frontend-v2/.env` (gitignored — NOT committed)
 
-- [ ] **Step 1: Create the env example**
+- [ ] **Step 1: Create the env example (committed)**
 
 Create `frontend-v2/.env.example` with:
 
 ```
-# Base URL for the RAG backend API.
-# Development: leave blank — vite.config.ts proxies /api to http://localhost:8000.
-# Production: set to the deployed backend origin (no trailing slash),
-# e.g. https://your-backend.example.com
+# Base URL for the RAG backend API (no trailing slash).
+# Leave blank to use the Vite dev proxy (/api -> http://localhost:8000).
+# Set to a full origin to call a deployed backend directly, e.g.:
+#   VITE_API_BASE_URL=https://gen-ai-portfolio-theta.vercel.app
 VITE_API_BASE_URL=
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Create the local .env pointing at the deployed backend (gitignored)**
+
+Create `frontend-v2/.env` with the same value v1 uses in `frontend/.env`:
+
+```
+VITE_API_BASE_URL=https://gen-ai-portfolio-theta.vercel.app
+```
+
+When this full URL is set, the browser calls the deployed backend directly and
+the Vite `/api` proxy is bypassed. (The deployed backend's CORS already allows
+`localhost:5173`, since v1 dev uses this exact setup.)
+
+- [ ] **Step 3: Confirm .env is gitignored (do NOT commit it)**
+
+Run (from repo root): `git check-ignore frontend-v2/.env`
+Expected: prints `frontend-v2/.env` (confirms it is ignored). If it prints
+nothing, STOP and do not commit the file.
+
+- [ ] **Step 4: Commit only the example**
 
 ```bash
 git add frontend-v2/.env.example
@@ -624,19 +648,21 @@ git commit -m "docs(frontend-v2): document VITE_API_BASE_URL"
 
 ## Task 8: Manual end-to-end verification
 
-No automated tests exist in frontend-v2; this task verifies the integration by hand.
+No automated tests exist in frontend-v2; this task verifies the integration by
+hand against the **deployed** backend configured in Task 7 (no local backend
+needed).
 
-- [ ] **Step 1: Start the backend**
+- [ ] **Step 1: Sanity-check the deployed backend is reachable**
 
-The backend needs `rag-backend/.env` populated with `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, and `OPENAI_API_KEY` (see `rag-backend/.env.example`). From `rag-backend`, with its virtualenv active:
-
-Run: `uvicorn app.main:app --reload --port 8000`
-Expected: server starts; `GET http://localhost:8000/` returns `{"status":"healthy",...}`.
+Run: `curl https://gen-ai-portfolio-theta.vercel.app/`
+Expected: JSON like `{"status":"healthy","service":"Portfolio RAG Backend",...}`.
+(If it errors, the deployment may be cold/asleep — retry once.)
 
 - [ ] **Step 2: Start the frontend dev server**
 
 Run (from `frontend-v2`): `npm run dev`
-Expected: Vite serves on `http://localhost:5173`.
+Expected: Vite serves on `http://localhost:5173`. The app reads
+`VITE_API_BASE_URL` from `.env` and calls the deployed backend directly.
 
 - [ ] **Step 3: Verify a chat exchange**
 
@@ -649,8 +675,13 @@ In the browser at `http://localhost:5173`:
 
 - [ ] **Step 4: Verify the error path**
 
-Stop the backend (Ctrl-C in its terminal), then send another message in the browser.
-Expected: readout shows `↳ <error message>` in the muted/miss style; the page does not crash; no fallback search runs.
+Temporarily point at a bad backend: stop the dev server, set
+`VITE_API_BASE_URL=https://gen-ai-portfolio-theta.vercel.app/does-not-exist`
+in `frontend-v2/.env`, restart `npm run dev`, and send a message. (Or use
+browser devtools to set Network → Offline and send a message.)
+Expected: readout shows `↳ <error message>` in the muted/miss style; the page
+does not crash; no fallback search runs. Afterward, restore `.env` to the real
+URL and restart the dev server.
 
 - [ ] **Step 5: Confirm the production build**
 
