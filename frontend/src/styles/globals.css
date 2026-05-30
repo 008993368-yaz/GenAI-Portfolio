@@ -286,6 +286,8 @@ a {
     linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
     var(--surface);
   min-width: 0;
+  /* Offset jump-to-section scrolling so content clears the fixed nav. */
+  scroll-margin-top: 6rem;
 }
 
 .section-header {
