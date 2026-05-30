@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="mgFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="58%" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="1"/>
+    </linearGradient>
+    <mask id="mgMask"><rect width="1440" height="900" fill="url(#mgFade)"/></mask>
+  </defs>
+  <g stroke="#00E5FF" stroke-opacity="0.16" stroke-width="1.2" mask="url(#mgMask)">
+    <!-- horizontal floor lines, spacing widens toward the viewer for perspective -->
+    <line x1="0" y1="470" x2="1440" y2="470"/>
+    <line x1="0" y1="512" x2="1440" y2="512"/>
+    <line x1="0" y1="562" x2="1440" y2="562"/>
+    <line x1="0" y1="622" x2="1440" y2="622"/>
+    <line x1="0" y1="694" x2="1440" y2="694"/>
+    <line x1="0" y1="780" x2="1440" y2="780"/>
+    <line x1="0" y1="882" x2="1440" y2="882"/>
+    <!-- vertical lines converging on the vanishing point (720, 430) -->
+    <line x1="720" y1="430" x2="-260" y2="900"/>
+    <line x1="720" y1="430" x2="120" y2="900"/>
+    <line x1="720" y1="430" x2="420" y2="900"/>
+    <line x1="720" y1="430" x2="720" y2="900"/>
+    <line x1="720" y1="430" x2="1020" y2="900"/>
+    <line x1="720" y1="430" x2="1320" y2="900"/>
+    <line x1="720" y1="430" x2="1700" y2="900"/>
+  </g>
+</svg>
