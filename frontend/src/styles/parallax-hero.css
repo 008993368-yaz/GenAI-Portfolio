@@ -1,0 +1,263 @@
+/* frontend/src/styles/parallax-hero.css
+ * Cinematic parallax hero. Transform maths mirror src/utils/parallaxMath.js.
+ * The hook writes --scroll/--progress/--mx/--my onto .phero-stage; each layer
+ * applies them via its own --speed/--depth. */
+
+.phero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate; /* contain z-index stacking to the hero */
+  background:
+    radial-gradient(80% 60% at 82% 6%, rgba(0, 102, 255, 0.16) 0%, transparent 70%),
+    radial-gradient(70% 50% at 16% 22%, rgba(255, 0, 229, 0.12) 0%, transparent 70%),
+    linear-gradient(160deg, var(--bg-0), var(--bg-1) 52%, #0d0d0d 100%);
+}
+
+/* The stage owns the parallax CSS vars and centres the content. */
+.phero-stage {
+  --pointer-range: 18px; /* desktop pointer tilt magnitude */
+  --parallax-gain: 1;    /* global scroll-parallax multiplier (reduced on mobile) */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6.5rem 6vw 2rem;
+}
+
+/* --- Layer stack ------------------------------------------------------ */
+.phero-layers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.phero-layer {
+  position: absolute;
+  inset: -8%; /* bleed so translated edges never reveal the page behind */
+  /* translateY = scroll * (1 - speed) * gain   (vertical parallax)
+   * + pointer tilt on both axes (near layers move more via --depth)
+   * background also zooms in slightly via --layer-zoom * progress */
+  transform:
+    translate3d(
+      calc(var(--mx, 0) * var(--depth) * var(--pointer-range)),
+      calc(
+        var(--scroll, 0px) * (1 - var(--speed)) * var(--parallax-gain) +
+        var(--my, 0) * var(--depth) * var(--pointer-range)
+      ),
+      0
+    )
+    scale(calc(1 + var(--progress, 0) * var(--layer-zoom, 0)));
+  will-change: transform;
+}
+
+.phero-layer__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+
+/* Background: distant, slow, gently pushing in. */
+.phero-layer--background {
+  --layer-zoom: 0.12;
+  background:
+    radial-gradient(38% 38% at 20% 26%, rgba(0, 229, 255, 0.22), transparent 60%),
+    radial-gradient(44% 44% at 80% 72%, rgba(255, 0, 229, 0.18), transparent 62%),
+    radial-gradient(60% 60% at 52% 50%, rgba(0, 102, 255, 0.12), transparent 70%);
+  filter: blur(8px);
+}
+
+/* Midground: faint structure. */
+.phero-layer--midground {
+  opacity: 0.9;
+}
+
+/* Foreground: sharp, fast, fades as it rushes past. */
+.phero-layer--foreground {
+  opacity: calc(1 - var(--progress, 0) * 0.6);
+}
+
+/* Edge vignette + bottom blend into the next section. */
+.phero-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% 38%, transparent 52%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(to bottom, transparent 72%, var(--bg-0) 100%);
+}
+
+/* --- Content --------------------------------------------------------- */
+.phero-content {
+  position: relative;
+  z-index: 2;
+  width: min(46rem, 100%);
+  min-width: 0;
+  /* Cinematic recede: rise slightly faster than the page, fade and shrink. */
+  opacity: calc(1 - var(--progress, 0) * 1.1);
+  transform:
+    translate3d(0, calc(var(--scroll, 0px) * -0.12 * var(--parallax-gain)), 0)
+    scale(calc(1 - var(--progress, 0) * 0.08));
+  will-change: transform, opacity;
+}
+
+.phero-logo {
+  width: max-content;
+  margin-bottom: 1.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+}
+
+.phero-name {
+  margin: 0;
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.78);
+  max-width: 100%;
+  overflow-wrap: normal;
+}
+
+.phero-tagline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5ch;
+  margin: 1.1rem 0;
+  font-size: clamp(1.4rem, 3.1vw, 2.8rem);
+  line-height: 1.1;
+  font-weight: 700;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.phero-word {
+  display: inline-block;
+  opacity: 0; /* GSAP load timeline reveals each word */
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.phero-subline {
+  width: min(34rem, 100%);
+  max-width: 100%;
+  color: var(--text-2);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.phero-cta {
+  margin-top: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-1);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-neon);
+  transition: transform 0.25s var(--transition-premium);
+}
+
+.phero-cta:hover {
+  transform: translateY(-4px);
+}
+
+.phero-visual-anchor {
+  display: none;
+}
+
+.phero-scroll-cue {
+  position: absolute;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-1);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  /* fade the cue out as the hero scrolls away */
+  opacity: calc(1 - var(--progress, 0) * 1.6);
+}
+
+.phero-scroll-cue__arrow {
+  animation: phero-bob 1.6s ease-in-out infinite;
+}
+
+@keyframes phero-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* --- Responsive ------------------------------------------------------ */
+@media (max-width: 768px) {
+  .phero-stage {
+    padding-top: 5.5rem;
+    --parallax-gain: 0.4;   /* minimise heavy parallax on small screens */
+    --pointer-range: 0px;
+  }
+  .phero-layer--foreground {
+    display: none;          /* drop the heaviest layer on small screens */
+  }
+  .phero-name {
+    font-size: clamp(2rem, 10vw, 4.75rem);
+    line-height: 0.98;
+    letter-spacing: 0;
+    -webkit-text-stroke-width: 1.25px;
+  }
+  .phero-tagline {
+    font-size: clamp(1.2rem, 6vw, 1.65rem);
+    line-height: 1.18;
+  }
+  .phero-subline {
+    font-size: 0.98rem;
+  }
+}
+
+/* No mouse tilt on touch / coarse pointers. */
+@media (hover: none) {
+  .phero-stage {
+    --pointer-range: 0px;
+  }
+}
+
+/* Honour reduced-motion: freeze everything to its resting state. */
+@media (prefers-reduced-motion: reduce) {
+  .phero-stage {
+    --parallax-gain: 0;
+    --pointer-range: 0px;
+  }
+  .phero-content {
+    opacity: 1;
+    transform: none;
+  }
+  .phero-layer {
+    transform: none;
+  }
+  .phero-scroll-cue {
+    opacity: 1;
+  }
+  .phero-scroll-cue__arrow {
+    animation: none;
+  }
+}

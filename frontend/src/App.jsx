@@ -1,8 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import Navbar from './components/nav/Navbar';
-import HeroText from './components/hero/HeroText';
-import ScrollIndicator from './components/hero/ScrollIndicator';
+import ParallaxHero from './components/hero/ParallaxHero';
 import SmoothScroll from './components/shared/SmoothScroll';
 import PageTransition from './components/shared/PageTransition';
 import SkillsSection from './components/SkillsSection';
@@ -17,7 +16,6 @@ import { useScrollSpy } from './hooks/useScrollSpy';
 import './App.css';
 
 function App() {
-  const heroSectionRef = useRef(null);
   const sectionIds = useMemo(() => navLinks.map((link) => link.id), []);
   const activeSection = useScrollSpy(sectionIds);
   const reducedMotion = useReducedMotion();
@@ -35,13 +33,12 @@ function App() {
 
       <Navbar links={navLinks} activeSection={activeSection} onNavigate={handleNavClick} />
 
-      <section id="home" className="hero-section" ref={heroSectionRef}>
-        <div className="hero-grid">
-          <HeroText name={portfolioData.personalInfo.name} onPrimaryClick={() => handleNavClick('projects')} />
-        </div>
-        <ChatWidget />
-        <ScrollIndicator onClick={() => handleNavClick('skills')} />
-      </section>
+      <ParallaxHero
+        name={portfolioData.personalInfo.name}
+        onPrimaryClick={() => handleNavClick('projects')}
+        onScrollCue={() => handleNavClick('skills')}
+      />
+      <ChatWidget />
 
       <main id="main-content" className="main-content" tabIndex={-1}>
         <PageTransition delay={0.05}>

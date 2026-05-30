@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vite
+*.log
+.playwright-mcp
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
