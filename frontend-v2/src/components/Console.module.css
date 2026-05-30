@@ -222,6 +222,13 @@
   color: var(--text-faint);
 }
 
+.run:disabled,
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .chips {
   margin-top: 1.2rem;
   display: flex;

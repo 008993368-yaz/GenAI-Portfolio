@@ -53,7 +53,8 @@ export function useChat() {
     try {
       const data = await getSuggestions({ lastUserMessage });
       if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-        setSuggestions(data.suggestions.slice(0, 3));
+        // Dedupe so two identical suggestions can't collide as React keys.
+        setSuggestions([...new Set(data.suggestions)].slice(0, 3));
       }
     } catch {
       // Non-fatal: keep the existing chips.
