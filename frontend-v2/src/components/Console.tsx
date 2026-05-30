@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { profile } from "../data/profile";
-import { useSearch } from "../hooks/useSearch";
+import { useChat } from "../hooks/useChat";
 import styles from "./Console.module.css";
 
 const skillCount = profile.skills.reduce((n, g) => n + g.items.length, 0);
@@ -10,7 +10,7 @@ export default function Console() {
   const root = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
-  const { result, run } = useSearch();
+  const { exchange, suggestions, send, sessionReady } = useChat();
 
   // Global ⌘K / Ctrl-K and status-bar button focus the query.
   useEffect(() => {
@@ -55,15 +55,16 @@ export default function Console() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    run(value);
+    send(value);
   };
 
   const pick = (q: string) => {
     setValue(q);
-    run(q);
+    send(q);
   };
 
   const verbs = profile.hero.headVerbs;
+  const thinking = exchange.status === "thinking";
 
   return (
     <section className={styles.hero} id="top" ref={root}>
@@ -109,43 +110,53 @@ export default function Console() {
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={profile.hero.placeholder}
-                aria-label="Query the corpus"
+                aria-label="Ask the assistant"
                 spellCheck={false}
                 autoComplete="off"
               />
               <button
                 type="submit"
                 className={styles.run}
-                aria-label="Run query"
+                aria-label="Send message"
+                disabled={thinking || !sessionReady}
               >
                 run ↵
               </button>
             </div>
 
             <div className={styles.readout} aria-live="polite">
-              {result &&
-                (result.ok ? (
-                  <span>
-                    ↳ <b>{result.count}</b> result
-                    {result.count === 1 ? "" : "s"} in <b>{result.ms}ms</b> ·
-                    jumped to <b>{result.label}</b>
+              {thinking && (
+                <span>
+                  ↳ thinking<span className={styles.caret} aria-hidden="true" />
+                </span>
+              )}
+              {exchange.status === "done" && (
+                <span className={styles.answer}>
+                  <span className={styles.qline}>› {exchange.query}</span>
+                  <span className={styles.replyLine}>↳ {exchange.reply}</span>
+                  <span className={styles.meta}>
+                    replied in <b>{exchange.ms}ms</b>
                   </span>
-                ) : (
-                  <span className={styles.miss}>
-                    ↳ no match for “{result.query}”
-                  </span>
-                ))}
+                </span>
+              )}
+              {exchange.status === "error" && (
+                <span className={styles.miss}>
+                  ↳ {exchange.error || "couldn't reach the assistant"}
+                </span>
+              )}
             </div>
           </form>
 
           <div className={styles.chips}>
-            {profile.hero.suggestions.map((s) => (
+            {suggestions.map((s) => (
               <button
-                key={s.q}
+                key={s}
+                type="button"
                 className={styles.chip}
-                onClick={() => pick(s.q)}
+                onClick={() => pick(s)}
+                disabled={thinking}
               >
-                {s.q}
+                {s}
               </button>
             ))}
           </div>
@@ -154,7 +165,7 @@ export default function Console() {
         <aside className={styles.hud} aria-hidden="true">
           <div className={styles.hudHead}>
             <span>corpus.meta</span>
-            <span className={styles.hudOk}>● ready</span>
+            <span className={styles.hudOk}>{thinking ? "● thinking" : "● ready"}</span>
           </div>
           <ul className={styles.hudList}>
             <li>
