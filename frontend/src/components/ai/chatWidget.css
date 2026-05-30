@@ -187,18 +187,37 @@
 
 @media (max-width: 640px) {
   .chat-widget {
+    position: static;
+    width: 100%;
+    margin-top: 1rem;
+    align-items: stretch;
+  }
+
+  .chat-widget.is-open {
+    position: fixed;
     left: 1rem;
     right: 1rem;
-    bottom: 5.5rem;
-    align-items: stretch;
+    bottom: 1rem;
+    width: auto;
+    z-index: 80;
   }
 
   .chat-widget__panel {
     width: 100%;
-    max-height: 68vh;
+    max-height: min(calc(100svh - 7rem), 32rem);
   }
 
   .chat-widget__trigger {
     width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .chat-widget {
+    margin-top: 0.75rem;
+  }
+
+  .chat-widget__panel {
+    max-height: min(calc(100svh - 6rem), 18rem);
   }
 }

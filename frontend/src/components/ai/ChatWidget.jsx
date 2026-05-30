@@ -172,7 +172,7 @@ function ChatWidget() {
   };
 
   return (
-    <div className="chat-widget" aria-live="polite">
+    <div className={`chat-widget ${isOpen ? 'is-open' : ''}`} aria-live="polite">
       {isOpen && (
         <section
           id="portfolio-assistant-panel"
