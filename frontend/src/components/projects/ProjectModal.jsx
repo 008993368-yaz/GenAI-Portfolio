@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -6,7 +6,7 @@ const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, se
 const ProjectModal = ({ project, onClose }) => {
   const modalRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!project || !modalRef.current) {
       return undefined;
     }
