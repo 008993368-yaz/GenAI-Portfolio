@@ -61,6 +61,17 @@ export const profile = {
       { q: "experience", to: "work" },
       { q: "say hello", to: "contact" },
     ],
+    // Seeded sample exchange shown in the mobile hero before the visitor asks.
+    demo: {
+      q: "what do you build?",
+      a: "Grounded, fast AI — RAG systems, agents, and the full stack around them.",
+      ms: 240,
+    },
+    // Mobile-only chips: a one-word label shown, a fuller query sent to the assistant.
+    mobileSuggestions: [
+      { label: "Experience", q: "Tell me about your experience" },
+      { label: "Skills", q: "What's your strongest tech stack?" },
+    ],
   },
 
   about: {
