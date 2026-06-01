@@ -94,3 +94,6 @@ Thumbs.db
 .eslintcache
 .prettierrc
 .editorconfig
+
+# Superpowers brainstorming companion
+.superpowers/
