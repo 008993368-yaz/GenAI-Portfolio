@@ -1,0 +1,16 @@
+# Keep the build context small and prevent local secrets/config from
+# leaking into the image. VITE_API_BASE_URL is supplied via build arg
+# (see docker-compose.yml) so .env files must NOT override it here.
+node_modules
+dist
+dist-ssr
+.env
+.env.*
+!.env.example
+*.log
+.vite
+.playwright-mcp
+.git
+.gitignore
+Dockerfile
+.dockerignore

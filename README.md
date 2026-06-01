@@ -10,7 +10,7 @@ This repository now includes end-to-end wiring between the frontend chat widget 
 
 ## Architecture
 
-- `frontend/`: React + Vite app, served by Nginx in Docker
+- `frontend-v2/`: React + TypeScript + Vite app, served by Nginx in Docker
 - `rag-backend/`: FastAPI app for chat, RAG retrieval, suggestions, and metrics
 - `docker-compose.yml`: Runs both services together
 
@@ -78,7 +78,7 @@ uvicorn app.main:app --reload --port 8000
 Terminal 2 (frontend):
 
 ```bash
-cd frontend
+cd frontend-v2
 npm install
 npm run dev
 ```
@@ -148,12 +148,12 @@ How wiring works in Docker:
 
 ## Frontend-Backend Integration Files
 
-- Chat UI: `frontend/src/components/ai/ChatWidget.jsx`
-- Chat styles: `frontend/src/components/ai/chatWidget.css`
-- API client: `frontend/src/services/chatApi.js`
-- Vite proxy: `frontend/vite.config.js`
+- Chat UI: `frontend-v2/src/components/Console.tsx`
+- Chat styles: `frontend-v2/src/components/Console.module.css`
+- API client: `frontend-v2/src/services/chatApi.ts`
+- Vite proxy: `frontend-v2/vite.config.ts`
 - Docker build arg: `docker-compose.yml`
-- Nginx API proxy: `frontend/nginx.conf`
+- Nginx API proxy: `frontend-v2/nginx.conf`
 
 ## Quick Verification
 
