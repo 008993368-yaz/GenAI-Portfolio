@@ -72,6 +72,9 @@ export default function Console() {
     exchange.status === "done" ? exchange.reply : ""
   );
 
+  // Seeded mobile demo answer types out on load (desktop hides it via CSS).
+  const { shown: demoTyped, done: demoDone } = useTypewriter(profile.hero.demo.a);
+
   return (
     <section className={styles.hero} id="top" ref={root}>
       <div className={styles.scan} aria-hidden="true" />
@@ -102,6 +105,29 @@ export default function Console() {
               </span>
             </span>
           </h1>
+
+          <div
+            className={styles.demo}
+            data-collapsed={exchange.status !== "idle"}
+          >
+            <span className={styles.demoQ} aria-hidden="true">
+              › {profile.hero.demo.q}
+            </span>
+            <span className={styles.demoA}>
+              <span aria-hidden="true">
+                ↳ {demoTyped}
+                {!demoDone && <span className={styles.caret} />}
+              </span>
+              <span className={styles.srOnly}>
+                {profile.hero.demo.q} — {profile.hero.demo.a}
+              </span>
+            </span>
+            {demoDone && (
+              <span className={styles.demoMeta} aria-hidden="true">
+                replied in <b>{profile.hero.demo.ms}ms</b>
+              </span>
+            )}
+          </div>
 
           <p className={styles.sub}>{profile.hero.sub}</p>
 
@@ -163,7 +189,8 @@ export default function Console() {
             </div>
           </form>
 
-          <div className={styles.chips}>
+          {/* Desktop chips: existing behavior, up to three suggestions. */}
+          <div className={`${styles.chips} ${styles.chipsDesktop}`}>
             {suggestions.map((s) => (
               <button
                 key={s}
@@ -175,6 +202,40 @@ export default function Console() {
                 {s}
               </button>
             ))}
+          </div>
+
+          {/* Mobile chips: two only. Curated one-word labels before the first
+              query; first two backend suggestions afterwards. */}
+          <div className={`${styles.chips} ${styles.chipsMobile}`}>
+            {(exchange.status === "idle"
+              ? profile.hero.mobileSuggestions
+              : suggestions.slice(0, 2).map((q) => ({ label: q, q }))
+            ).map((c) => (
+              <button
+                key={c.label}
+                type="button"
+                className={styles.chip}
+                onClick={() => pick(c.q)}
+                disabled={thinking}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className={styles.signal}
+            data-thinking={thinking}
+            aria-hidden="true"
+          >
+            <span className={styles.signalLabel}>
+              corpus <span className={styles.signalLive}>● live</span>
+            </span>
+            <span className={styles.eq}>
+              {Array.from({ length: 7 }).map((_, i) => (
+                <i key={i} />
+              ))}
+            </span>
           </div>
         </div>
 
