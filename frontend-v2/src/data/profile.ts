@@ -54,7 +54,6 @@ export const profile = {
     kicker: "full-stack & gen-ai engineer · redlands ca",
     headStart: "I build software that ",
     headVerbs: ["retrieves", "reasons", "responds"],
-    sub: "Master's CS candidate and ex-Accenture engineer working across React, FastAPI, and LangChain to ship grounded, fast AI.",
     placeholder: "ask my corpus…",
     suggestions: [
       { q: "rag systems", to: "projects" },
