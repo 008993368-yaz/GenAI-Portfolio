@@ -42,7 +42,7 @@ export default function Console() {
           { yPercent: 110, duration: 0.95, stagger: 0.08, ease: "power4.out" },
           "-=0.25"
         )
-        .from(`.${styles.sub}`, { opacity: 0, y: 14, duration: 0.7 }, "-=0.5")
+        .from(`.${styles.demo}`, { opacity: 0, y: 14, duration: 0.7 }, "-=0.5")
         .from(`.${styles.console}`, { opacity: 0, y: 18, duration: 0.7 }, "-=0.45")
         .from(
           `.${styles.chip}`,
@@ -128,8 +128,6 @@ export default function Console() {
               </span>
             )}
           </div>
-
-          <p className={styles.sub}>{profile.hero.sub}</p>
 
           <form className={styles.console} onSubmit={submit}>
             <div className={styles.prompt}>
