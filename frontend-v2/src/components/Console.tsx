@@ -42,7 +42,11 @@ export default function Console() {
           { yPercent: 110, duration: 0.95, stagger: 0.08, ease: "power4.out" },
           "-=0.25"
         )
-        .from(`.${styles.demo}`, { opacity: 0, y: 14, duration: 0.7 }, "-=0.5")
+        .from(
+          `.${styles.demo}`,
+          { opacity: 0, y: 14, duration: 0.7, clearProps: "opacity,transform" },
+          "-=0.5"
+        )
         .from(`.${styles.console}`, { opacity: 0, y: 18, duration: 0.7 }, "-=0.45")
         .from(
           `.${styles.chip}`,
@@ -72,7 +76,7 @@ export default function Console() {
     exchange.status === "done" ? exchange.reply : ""
   );
 
-  // Seeded mobile demo answer types out on load (desktop hides it via CSS).
+  // Seeded demo answer types out on load; the demo collapses on first real query.
   const { shown: demoTyped, done: demoDone } = useTypewriter(profile.hero.demo.a);
 
   return (
