@@ -22,7 +22,7 @@ const INITIAL_EXCHANGE: ChatExchange = {
   error: "",
 };
 
-const SEED_SUGGESTIONS = profile.hero.suggestions.map((s) => s.q);
+const SEED_SUGGESTIONS = profile.hero.chips.map((c) => c.q);
 
 function generateSessionId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
