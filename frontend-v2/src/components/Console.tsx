@@ -71,6 +71,24 @@ export default function Console() {
   const verbs = profile.hero.headVerbs;
   const thinking = exchange.status === "thinking";
 
+  // Starter chips before the first query, live backend suggestions afterward.
+  // Same curated list for both rows — desktop shows three, mobile shows two.
+  const renderChips = (count: number) =>
+    (exchange.status === "idle"
+      ? profile.hero.chips.slice(0, count)
+      : suggestions.slice(0, count).map((q) => ({ label: q, q }))
+    ).map((c) => (
+      <button
+        key={c.label}
+        type="button"
+        className={styles.chip}
+        onClick={() => pick(c.q)}
+        disabled={thinking}
+      >
+        {c.label}
+      </button>
+    ));
+
   // Type the answer out character by character once it arrives.
   const { shown: typedReply, done: typedDone } = useTypewriter(
     exchange.status === "done" ? exchange.reply : ""
@@ -191,38 +209,13 @@ export default function Console() {
             </div>
           </form>
 
-          {/* Desktop chips: existing behavior, up to three suggestions. */}
+          {/* Desktop shows three chips, mobile shows two. The CSS toggles which
+              row is visible at the breakpoint. */}
           <div className={`${styles.chips} ${styles.chipsDesktop}`}>
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={styles.chip}
-                onClick={() => pick(s)}
-                disabled={thinking}
-              >
-                {s}
-              </button>
-            ))}
+            {renderChips(3)}
           </div>
-
-          {/* Mobile chips: two only. Curated one-word labels before the first
-              query; first two backend suggestions afterwards. */}
           <div className={`${styles.chips} ${styles.chipsMobile}`}>
-            {(exchange.status === "idle"
-              ? profile.hero.mobileSuggestions
-              : suggestions.slice(0, 2).map((q) => ({ label: q, q }))
-            ).map((c) => (
-              <button
-                key={c.label}
-                type="button"
-                className={styles.chip}
-                onClick={() => pick(c.q)}
-                disabled={thinking}
-              >
-                {c.label}
-              </button>
-            ))}
+            {renderChips(2)}
           </div>
         </div>
 

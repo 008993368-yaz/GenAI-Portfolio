@@ -55,21 +55,18 @@ export const profile = {
     headStart: "I build software that ",
     headVerbs: ["retrieves", "reasons", "responds"],
     placeholder: "ask my corpus…",
-    suggestions: [
-      { q: "rag systems", to: "projects" },
-      { q: "experience", to: "work" },
-      { q: "say hello", to: "contact" },
-    ],
     // Seeded sample exchange shown in the mobile hero before the visitor asks.
     demo: {
-      q: "what do you build?",
-      a: "Grounded, fast AI — RAG systems, agents, and the full stack around them.",
+      q: "describe yourself",
+      a: "I'm Yazhini — an agentic engineer who builds intelligent software end to end, from the agents that reason to the interfaces and cloud around them. I turn ideas into products that are fast, reliable, and genuinely useful.",
       ms: 240,
     },
-    // Mobile-only chips: a one-word label shown, a fuller query sent to the assistant.
-    mobileSuggestions: [
+    // Starter chips: a short label shown, a fuller query sent to the assistant.
+    // Desktop shows all three; mobile shows the first two.
+    chips: [
       { label: "Experience", q: "Tell me about your experience" },
       { label: "Skills", q: "What's your strongest tech stack?" },
+      { label: "Projects", q: "What projects have you built?" },
     ],
   },
 
