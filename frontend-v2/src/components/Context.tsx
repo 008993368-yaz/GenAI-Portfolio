@@ -1,9 +1,11 @@
 import { profile } from "../data/profile";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { usePipelineReveal } from "../hooks/usePipelineReveal";
 import styles from "./Context.module.css";
 
 export default function Context() {
   const ref = useScrollReveal<HTMLElement>({ stagger: 0.08 });
+  const pipelineRef = usePipelineReveal<HTMLDivElement>();
 
   return (
     <section className={styles.context} id="about" ref={ref}>
@@ -15,9 +17,30 @@ export default function Context() {
         </header>
 
         <div className={styles.grid}>
-          <div className={styles.prose}>
-            <p className={`reveal ${styles.lead}`}>{profile.about.lead}</p>
-            <p className={`reveal ${styles.body}`}>{profile.about.body}</p>
+          <div className={styles.pipeline} ref={pipelineRef}>
+            <p className={`reveal ${styles.prompt}`}>{profile.about.prompt}</p>
+
+            <div className={styles.flow}>
+              <span className={styles.spine} data-spine aria-hidden="true" />
+              {profile.about.pipeline.map((stage, i, arr) => (
+                <div
+                  key={stage.verb}
+                  className={styles.node}
+                  data-node
+                  data-output={i === arr.length - 1 ? "true" : undefined}
+                >
+                  <span className={styles.dot} aria-hidden="true" />
+                  <span className={styles.verb}>{stage.verb}</span>
+                  <span className={styles.tech}>{stage.tech}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className={`reveal ${styles.values}`} aria-hidden="true">
+              ↳ {profile.about.values}
+            </p>
+
+            <p className={styles.srOnly}>{profile.about.summary}</p>
           </div>
 
           <dl className={`reveal ${styles.manifest}`}>
