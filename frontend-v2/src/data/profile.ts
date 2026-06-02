@@ -75,8 +75,20 @@ export const profile = {
   },
 
   about: {
-    lead: "I work the full stack, from React interfaces to FastAPI and LangChain backends, with a focus on retrieval-augmented AI that stays grounded, fast, and genuinely useful.",
-    body: "Three years at Accenture shipping production web apps and GenAI automation, now sharpening the fundamentals through a 4.0 Master's in Computer Science.",
+    // Spoken prompt above the pipeline.
+    prompt: "how i build →",
+    // Signal-flow stages: brand verb + the real tech behind it. The last
+    // stage renders as the pipeline's glowing output (decided by position).
+    pipeline: [
+      { verb: "retrieves", tech: "pinecone · semantic search" },
+      { verb: "reasons", tech: "langchain · agents" },
+      { verb: "responds", tech: "fastapi → react" },
+    ],
+    // Footer line under the pipeline.
+    values: "grounded · fast · genuinely useful",
+    // Visually-hidden narrative for screen readers + SEO (keeps the prose).
+    summary:
+      "Full-stack engineer building retrieval-augmented AI: retrieves with Pinecone and semantic search, reasons with LangChain and agents, responds through FastAPI and React — grounded, fast, and genuinely useful.",
   },
 
   // Config-style manifest shown in the About / context block
