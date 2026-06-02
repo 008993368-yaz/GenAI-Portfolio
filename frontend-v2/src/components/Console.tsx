@@ -222,21 +222,6 @@ export default function Console() {
               </button>
             ))}
           </div>
-
-          <div
-            className={styles.signal}
-            data-thinking={thinking}
-            aria-hidden="true"
-          >
-            <span className={styles.signalLabel}>
-              corpus <span className={styles.signalLive}>● live</span>
-            </span>
-            <span className={styles.eq}>
-              {Array.from({ length: 7 }).map((_, i) => (
-                <i key={i} />
-              ))}
-            </span>
-          </div>
         </div>
 
         <aside className={styles.hud} aria-hidden="true">

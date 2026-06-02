@@ -410,99 +410,12 @@
   font-weight: 500;
 }
 
-/* ---- corpus signal meter (mobile only; hidden on desktop) ---- */
-.signal {
-  display: none;
-  align-items: center;
-  gap: 0.7rem;
-  font-family: var(--font-mono);
-  font-size: var(--step--2);
-  color: var(--text-dim);
-}
-
-.signalLive {
-  color: var(--signal);
-}
-
-.eq {
-  margin-left: auto;
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 18px;
-}
-
-.eq i {
-  width: 3px;
-  border-radius: 1px;
-  background: var(--signal-deep);
-  animation-name: eqIdle;
-  animation-duration: 1.6s;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
-
-.eq i:nth-child(2),
-.eq i:nth-child(6) {
-  background: var(--signal);
-}
-
-.eq i:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.eq i:nth-child(3) {
-  animation-delay: 0.4s;
-}
-.eq i:nth-child(4) {
-  animation-delay: 0.6s;
-}
-.eq i:nth-child(5) {
-  animation-delay: 0.8s;
-}
-.eq i:nth-child(6) {
-  animation-delay: 1s;
-}
-.eq i:nth-child(7) {
-  animation-delay: 1.2s;
-}
-
-/* spikes while the assistant is thinking; the per-bar delay set above is
-   preserved because only animation name + duration are overridden here. */
-.signal[data-thinking="true"] .eq i {
-  animation-name: eqActive;
-  animation-duration: 0.55s;
-}
-
-@keyframes eqIdle {
-  0%,
-  100% {
-    height: 4px;
-  }
-  50% {
-    height: 9px;
-  }
-}
-
-@keyframes eqActive {
-  0%,
-  100% {
-    height: 5px;
-  }
-  50% {
-    height: 18px;
-  }
-}
-
 /* mobile chip group hidden by default; desktop group shown */
 .chipsMobile {
   display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .eq i {
-    animation: none !important;
-    height: 9px;
-  }
   .demo {
     transition: none;
   }
@@ -544,14 +457,6 @@
     opacity: 0;
     margin-top: 0;
     pointer-events: none;
-  }
-
-  /* show the signal meter under the chips */
-  .signal {
-    display: flex;
-    margin-top: clamp(1.6rem, 1.2rem + 1.5vw, 2.2rem);
-    padding-top: 1rem;
-    border-top: 1px solid var(--line-soft);
   }
 
   /* swap chip groups */
