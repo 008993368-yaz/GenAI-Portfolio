@@ -123,7 +123,10 @@
   border: 0;
 }
 
-/* reduced motion: pipeline shown fully, no draw/stagger */
+/* Reduced motion: pipeline shown fully, no draw/stagger. This also doubles as
+   the safety net when JS never runs (the .spine/.node opacity:0 resting state
+   is only animated open by usePipelineReveal) — keep it even though the hook
+   has its own reduced-motion branch. */
 @media (prefers-reduced-motion: reduce) {
   .spine,
   .node {
