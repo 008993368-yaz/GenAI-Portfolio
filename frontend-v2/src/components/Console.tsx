@@ -166,6 +166,8 @@ export default function Console() {
                 ↳ thinking<span className={styles.caret} aria-hidden="true" />
               </span>
             )}
+            {/* key={exchange.query} is load-bearing: it changes per question so
+                React remounts this node and replays the answerIn animation. */}
             {answering && (
               <span className={styles.answer} key={exchange.query}>
                 <span className={styles.qline}>› {exchange.query}</span>
