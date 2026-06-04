@@ -62,11 +62,14 @@ export default function Console() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     send(value);
+    setValue("");
+    inputRef.current?.focus();
   };
 
   const pick = (q: string) => {
-    setValue(q);
     send(q);
+    setValue("");
+    inputRef.current?.focus();
   };
 
   const verbs = profile.hero.headVerbs;
