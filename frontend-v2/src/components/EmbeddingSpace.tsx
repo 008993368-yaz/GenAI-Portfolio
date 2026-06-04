@@ -28,7 +28,6 @@ interface Node {
 }
 
 export default function EmbeddingSpace() {
-  const root = useRef<HTMLElement>(null);
   const field = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<number | null>(null);
 
@@ -43,7 +42,7 @@ export default function EmbeddingSpace() {
         const ry = 8 + (j % 2) * 3.5;
         const x = Math.min(94, Math.max(6, center.x + Math.cos(angle) * rx));
         const y = Math.min(92, Math.max(8, center.y + Math.sin(angle) * ry));
-        out.push({ label, cluster: c, color: COLORS[c], x, y, cx: center.x, cy: center.y });
+        out.push({ label, cluster: c, color: COLORS[c % COLORS.length], x, y, cx: center.x, cy: center.y });
       });
     });
     return out;
@@ -73,7 +72,7 @@ export default function EmbeddingSpace() {
   }, []);
 
   return (
-    <section className={styles.skills} id="skills" ref={root}>
+    <section className={styles.skills} id="skills">
       <div className={styles.shell}>
         <header className={styles.head}>
           <div>
@@ -89,11 +88,7 @@ export default function EmbeddingSpace() {
         </header>
 
         {/* Interactive field (desktop) */}
-        <div
-          className={styles.field}
-          ref={field}
-          data-active={active !== null}
-        >
+        <div className={styles.field} ref={field}>
           <svg className={styles.lines} viewBox="0 0 100 100" preserveAspectRatio="none">
             {nodes.map((nd, i) => (
               <line
@@ -110,26 +105,30 @@ export default function EmbeddingSpace() {
             ))}
           </svg>
 
-          {profile.skills.map((group, c) => (
-            <button
-              key={group.label}
-              className={styles.centroid}
-              style={{
-                left: `${CENTROIDS[c].x}%`,
-                top: `${CENTROIDS[c].y}%`,
-                color: COLORS[c],
-                opacity: active === null || active === c ? 1 : 0.32,
-              }}
-              onMouseEnter={() => setActive(c)}
-              onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(c)}
-              onBlur={() => setActive(null)}
-            >
-              <span className={styles.centroidDot} />
-              {group.label.toLowerCase()}
-              <span className={styles.centroidCount}>{group.items.length}</span>
-            </button>
-          ))}
+          {profile.skills.map((group, c) => {
+            const center = CENTROIDS[c % CENTROIDS.length];
+            return (
+              <button
+                key={group.label}
+                type="button"
+                className={styles.centroid}
+                style={{
+                  left: `${center.x}%`,
+                  top: `${center.y}%`,
+                  color: COLORS[c % COLORS.length],
+                  opacity: active === null || active === c ? 1 : 0.32,
+                }}
+                onMouseEnter={() => setActive(c)}
+                onMouseLeave={() => setActive(null)}
+                onFocus={() => setActive(c)}
+                onBlur={() => setActive(null)}
+              >
+                <span className={styles.centroidDot} />
+                {group.label.toLowerCase()}
+                <span className={styles.centroidCount}>{group.items.length}</span>
+              </button>
+            );
+          })}
 
           {nodes.map((nd, i) => (
             <div
