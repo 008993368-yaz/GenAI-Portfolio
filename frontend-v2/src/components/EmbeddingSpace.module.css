@@ -135,39 +135,126 @@
   color: var(--text-dim);
 }
 
-/* ---- fallback list ---- */
-.fallback {
-  display: none;
+/* ---- mobile / reduced-motion: domain-tuner accordion ---- */
+.accordion {
+  display: none; /* shown via the media queries below */
   flex-direction: column;
-  gap: 1.6rem;
+  width: 100%;
+  max-width: 36rem; /* keep it from sprawling under reduced-motion on desktop */
+  margin-inline: auto;
 }
 
-.fGroup {
+.aRow {
   border-top: 1px solid var(--line-soft);
-  padding-top: 1.1rem;
+}
+.aRow:last-child {
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.fLabel {
+/* the <h3> only wraps the button for heading semantics; strip its box */
+.aHeadWrap {
+  margin: 0;
+}
+
+.aHead {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.7ch;
+  padding: 0.95rem 0.25rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
   font-family: var(--font-mono);
   font-size: var(--step--1);
+  letter-spacing: 0.02em;
   color: var(--text-mid);
-  margin-bottom: 0.9rem;
-  text-transform: lowercase;
-  letter-spacing: 0.03em;
-  font-weight: 500;
+  transition: color 0.25s var(--ease);
 }
 
-.fChips {
+.aDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: box-shadow 0.3s var(--ease);
+}
+
+.aName {
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.aSpacer {
+  flex: 1;
+}
+
+.miniDots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.miniDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+.aCount {
+  min-width: 1.5ch;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.aToggle {
+  width: 1.2ch;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: var(--step-0);
+}
+
+/* open-row emphasis */
+.aRow[data-open="true"] .aHead,
+.aRow[data-open="true"] .aToggle {
+  color: var(--signal);
+}
+.aRow[data-open="true"] .aName {
+  color: var(--signal);
+  font-weight: 600;
+}
+.aRow[data-open="true"] .aDot {
+  box-shadow: 0 0 8px var(--signal-glow);
+}
+
+/* panel height animates via grid-template-rows 0fr -> 1fr */
+.aPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s var(--ease);
+}
+.aRow[data-open="true"] .aPanel {
+  grid-template-rows: 1fr;
+}
+.aPanelInner {
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+.aRow[data-open="true"] .aPanelInner {
+  opacity: 1;
+}
+
+.aChips {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin: 0;
+  padding: 0 0.25rem 1.1rem 1.5rem;
 }
-
-.fChips li {
+.aChips li {
   font-family: var(--font-mono);
   font-size: var(--step--1);
   color: var(--text-mid);
@@ -180,7 +267,7 @@
   .field {
     display: none;
   }
-  .fallback {
+  .accordion {
     display: flex;
   }
 }
@@ -189,7 +276,13 @@
   .field {
     display: none;
   }
-  .fallback {
+  .accordion {
     display: flex;
+  }
+  .aPanel,
+  .aPanelInner,
+  .aDot,
+  .aHead {
+    transition: none;
   }
 }
