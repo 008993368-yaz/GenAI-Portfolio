@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { profile } from "../data/profile";
+import { useScrollReveal } from "../hooks/useScrollReveal";
 import styles from "./EmbeddingSpace.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -30,6 +31,12 @@ interface Node {
 export default function EmbeddingSpace() {
   const field = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<number | null>(null);
+  // Mobile accordion: index of the open domain (first open on load).
+  const [open, setOpen] = useState<number | null>(0);
+  // Scroll-in reveal for the accordion rows; trigger is the (always-visible)
+  // section, so it fires reliably even though the accordion is display:none
+  // on desktop. Reduced-motion is handled inside the hook + the .reveal class.
+  const revealRef = useScrollReveal<HTMLElement>();
 
   const nodes = useMemo<Node[]>(() => {
     const out: Node[] = [];
@@ -72,7 +79,7 @@ export default function EmbeddingSpace() {
   }, []);
 
   return (
-    <section className={styles.skills} id="skills">
+    <section className={styles.skills} id="skills" ref={revealRef}>
       <div className={styles.shell}>
         <header className={styles.head}>
           <div>
@@ -82,8 +89,7 @@ export default function EmbeddingSpace() {
             <h2 className={styles.title}>Embedding space</h2>
           </div>
           <p className={styles.note}>
-            {nodes.length} competencies, projected onto a plane and grouped by
-            domain.
+            {nodes.length} competencies, grouped by domain.
           </p>
         </header>
 
@@ -148,21 +154,70 @@ export default function EmbeddingSpace() {
           ))}
         </div>
 
-        {/* Legible fallback (mobile / reduced motion) */}
-        <div className={styles.fallback}>
-          {profile.skills.map((group, c) => (
-            <div className={styles.fGroup} key={group.label}>
-              <h3 className={styles.fLabel}>
-                <span className={styles.dot} style={{ background: COLORS[c] }} />
-                {group.label}
-              </h3>
-              <ul className={styles.fChips}>
-                {group.items.map((it) => (
-                  <li key={it}>{it}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        {/* Mobile / reduced-motion: tappable "domain tuner" accordion */}
+        <div className={styles.accordion}>
+          {profile.skills.map((group, c) => {
+            const isOpen = open === c;
+            const color = COLORS[c % COLORS.length];
+            return (
+              <div
+                className={`reveal ${styles.aRow}`}
+                key={group.label}
+                data-open={isOpen}
+              >
+                <h3 className={styles.aHeadWrap}>
+                  <button
+                    type="button"
+                    className={styles.aHead}
+                    aria-expanded={isOpen}
+                    aria-controls={`skills-acc-${c}`}
+                    id={`skills-tab-${c}`}
+                    onClick={() => setOpen(isOpen ? null : c)}
+                  >
+                    <span
+                      className={styles.aDot}
+                      style={{ background: color }}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.aName}>
+                      {group.label.toLowerCase()}
+                    </span>
+                    <span className={styles.aSpacer} />
+                    {!isOpen && (
+                      <span className={styles.miniDots} aria-hidden="true">
+                        {group.items.map((_, k) => (
+                          <span
+                            key={k}
+                            className={styles.miniDot}
+                            style={{ background: color }}
+                          />
+                        ))}
+                      </span>
+                    )}
+                    <span className={styles.aCount}>{group.items.length}</span>
+                    <span className={styles.aToggle} aria-hidden="true">
+                      {isOpen ? "−" : "+"}
+                    </span>
+                  </button>
+                </h3>
+                <div
+                  id={`skills-acc-${c}`}
+                  role="region"
+                  aria-labelledby={`skills-tab-${c}`}
+                  aria-hidden={!isOpen}
+                  className={styles.aPanel}
+                >
+                  <div className={styles.aPanelInner}>
+                    <ul className={styles.aChips}>
+                      {group.items.map((it) => (
+                        <li key={it}>{it}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
