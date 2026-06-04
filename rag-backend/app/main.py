@@ -19,10 +19,11 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from app.services.retriever import retrieve_resume_context
-from app.services.chat_orchestrator import generate_chat_reply
+from app.services.chat_orchestrator import generate_chat_reply, stream_chat_reply
+from app.services.sse import sse_encode
 from app.services.rag import generate_suggested_questions
 from app.services.memory import get_memory
 from app.config import Config
@@ -440,6 +441,30 @@ async def chat(request: Request, payload: ChatRequest, response: Response):
             status_code=500,
             detail="Failed to generate chat response."
         )
+
+
+# Streaming chat endpoint - same pipeline as /chat, streamed as SSE
+@app.post("/chat/stream")
+@limiter.limit(Config.CHAT_RATE_LIMIT)
+async def chat_stream(request: Request, payload: ChatRequest):
+    """Stream the assistant's reply as Server-Sent Events.
+
+    Emits ``token`` envelopes as the LLM generates them, then a terminal
+    ``done`` (or ``error``). The frontend falls back to ``/chat`` on failure.
+    """
+    async def event_source():
+        try:
+            async for envelope in stream_chat_reply(payload.sessionId, payload.message):
+                yield sse_encode(envelope)
+        except Exception:
+            ERROR_COUNT.labels(endpoint="/chat/stream", error_type="chat_error").inc()
+            yield sse_encode({"type": "error", "message": "Failed to generate chat response."})
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # RAG search endpoint (debug - no LLM)
