@@ -160,6 +160,40 @@ export default function Console() {
             )}
           </div>
 
+          <div className={styles.readout} aria-live="polite">
+            {thinking && (
+              <span>
+                ↳ thinking<span className={styles.caret} aria-hidden="true" />
+              </span>
+            )}
+            {answering && (
+              <span className={styles.answer} key={exchange.query}>
+                <span className={styles.qline}>› {exchange.query}</span>
+                <span className={styles.replyLine}>
+                  {/* Visible typing is decorative; screen readers get one
+                      clean copy of the full reply once it's complete. */}
+                  <span aria-hidden="true">
+                    ↳ {typedReply}
+                    {!typedDone && <span className={styles.caret} />}
+                  </span>
+                  <span className={styles.srOnly}>
+                    {exchange.status === "done" ? `↳ ${exchange.reply}` : ""}
+                  </span>
+                </span>
+                {typedDone && (
+                  <span className={styles.meta}>
+                    replied in <b>{exchange.ms}ms</b>
+                  </span>
+                )}
+              </span>
+            )}
+            {exchange.status === "error" && (
+              <span className={styles.miss}>
+                ↳ {exchange.error || "couldn't reach the assistant"}
+              </span>
+            )}
+          </div>
+
           <form className={styles.console} onSubmit={submit}>
             <div className={styles.prompt}>
               <span className={styles.chevron} aria-hidden="true">
@@ -183,40 +217,6 @@ export default function Console() {
               >
                 run ↵
               </button>
-            </div>
-
-            <div className={styles.readout} aria-live="polite">
-              {thinking && (
-                <span>
-                  ↳ thinking<span className={styles.caret} aria-hidden="true" />
-                </span>
-              )}
-              {answering && (
-                <span className={styles.answer}>
-                  <span className={styles.qline}>› {exchange.query}</span>
-                  <span className={styles.replyLine}>
-                    {/* Visible typing is decorative; screen readers get one
-                        clean copy of the full reply once it's complete. */}
-                    <span aria-hidden="true">
-                      ↳ {typedReply}
-                      {!typedDone && <span className={styles.caret} />}
-                    </span>
-                    <span className={styles.srOnly}>
-                      {exchange.status === "done" ? `↳ ${exchange.reply}` : ""}
-                    </span>
-                  </span>
-                  {typedDone && (
-                    <span className={styles.meta}>
-                      replied in <b>{exchange.ms}ms</b>
-                    </span>
-                  )}
-                </span>
-              )}
-              {exchange.status === "error" && (
-                <span className={styles.miss}>
-                  ↳ {exchange.error || "couldn't reach the assistant"}
-                </span>
-              )}
             </div>
           </form>
 
