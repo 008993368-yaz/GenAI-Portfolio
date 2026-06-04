@@ -50,6 +50,9 @@ export function useChat() {
     setSessionId(getOrCreateSessionId());
   }, []);
 
+  // Cancel any in-flight stream if the component unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const refreshSuggestions = useCallback(async (lastUserMessage: string) => {
     try {
       const data = await getSuggestions({ lastUserMessage });

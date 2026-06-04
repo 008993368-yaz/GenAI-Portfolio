@@ -82,6 +82,11 @@ export async function streamChatWithPortfolio(args: {
       }
     }
   }
+
+  // The stream closed without a terminal `done`/`error` (e.g. a dropped
+  // connection mid-answer). Treat it as a failure so the caller falls back to
+  // the non-streaming endpoint and the visitor still gets a complete reply.
+  throw new Error("Streaming ended before completion.");
 }
 
 export function getSuggestions(
