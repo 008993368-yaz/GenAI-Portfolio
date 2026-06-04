@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { profile } from "../data/profile";
 import { useChat } from "../hooks/useChat";
 import { useTypewriter } from "../hooks/useTypewriter";
+import { useStreamingText } from "../hooks/useStreamingText";
 import styles from "./Console.module.css";
 
 const skillCount = profile.skills.reduce((n, g) => n + g.items.length, 0);
@@ -70,6 +71,7 @@ export default function Console() {
 
   const verbs = profile.hero.headVerbs;
   const thinking = exchange.status === "thinking";
+  const busy = thinking || exchange.status === "streaming";
 
   // Starter chips before the first query, live backend suggestions afterward.
   // Same curated list for both rows — desktop shows three, mobile shows two.
@@ -83,15 +85,19 @@ export default function Console() {
         type="button"
         className={styles.chip}
         onClick={() => pick(c.q)}
-        disabled={thinking}
+        disabled={busy}
       >
         {c.label}
       </button>
     ));
 
-  // Type the answer out character by character once it arrives.
-  const { shown: typedReply, done: typedDone } = useTypewriter(
-    exchange.status === "done" ? exchange.reply : ""
+  // Reveal the live answer as it streams in (smoothed), and keep revealing the
+  // one-shot reply when we fell back to the non-streaming endpoint.
+  const answering =
+    exchange.status === "streaming" || exchange.status === "done";
+  const { shown: typedReply, done: typedDone } = useStreamingText(
+    answering ? exchange.reply : "",
+    { streaming: exchange.status === "streaming" }
   );
 
   // Seeded demo answer types out on load; the demo collapses on first real query.
@@ -170,7 +176,7 @@ export default function Console() {
                 type="submit"
                 className={styles.run}
                 aria-label="Send message"
-                disabled={thinking || !sessionReady}
+                disabled={busy || !sessionReady}
               >
                 run ↵
               </button>
@@ -182,17 +188,19 @@ export default function Console() {
                   ↳ thinking<span className={styles.caret} aria-hidden="true" />
                 </span>
               )}
-              {exchange.status === "done" && (
+              {answering && (
                 <span className={styles.answer}>
                   <span className={styles.qline}>› {exchange.query}</span>
                   <span className={styles.replyLine}>
                     {/* Visible typing is decorative; screen readers get one
-                        clean copy of the full reply via the sr-only span. */}
+                        clean copy of the full reply once it's complete. */}
                     <span aria-hidden="true">
                       ↳ {typedReply}
                       {!typedDone && <span className={styles.caret} />}
                     </span>
-                    <span className={styles.srOnly}>↳ {exchange.reply}</span>
+                    <span className={styles.srOnly}>
+                      {exchange.status === "done" ? `↳ ${exchange.reply}` : ""}
+                    </span>
                   </span>
                   {typedDone && (
                     <span className={styles.meta}>
@@ -222,7 +230,7 @@ export default function Console() {
         <aside className={styles.hud} aria-hidden="true">
           <div className={styles.hudHead}>
             <span>corpus.meta</span>
-            <span className={styles.hudOk}>{thinking ? "● thinking" : "● ready"}</span>
+            <span className={styles.hudOk}>{busy ? "● thinking" : "● ready"}</span>
           </div>
           <ul className={styles.hudList}>
             <li>

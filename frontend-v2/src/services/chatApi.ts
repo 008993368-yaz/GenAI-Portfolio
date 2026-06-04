@@ -1,3 +1,5 @@
+import { createSSEParser } from "./sseParser";
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
 export interface ChatResponse {
@@ -37,6 +39,54 @@ export function chatWithPortfolio(args: {
     sessionId: args.sessionId,
     message: args.message,
   });
+}
+
+/**
+ * POST to the streaming chat endpoint and invoke `onToken` for each token as
+ * it arrives. Resolves when the server sends `done`. Throws on a non-OK
+ * response, a missing body, or a server `error` envelope — the caller is
+ * expected to fall back to the non-streaming `chatWithPortfolio`.
+ */
+export async function streamChatWithPortfolio(args: {
+  sessionId: string;
+  message: string;
+  onToken: (text: string) => void;
+  signal?: AbortSignal;
+}): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: args.sessionId, message: args.message }),
+    signal: args.signal,
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error("Streaming request failed.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const push = createSSEParser();
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    for (const envelope of push(decoder.decode(value, { stream: true }))) {
+      if (envelope.type === "token") {
+        args.onToken(envelope.text);
+      } else if (envelope.type === "done") {
+        return;
+      } else if (envelope.type === "error") {
+        throw new Error(envelope.message);
+      }
+    }
+  }
+
+  // The stream closed without a terminal `done`/`error` (e.g. a dropped
+  // connection mid-answer). Treat it as a failure so the caller falls back to
+  // the non-streaming endpoint and the visitor still gets a complete reply.
+  throw new Error("Streaming ended before completion.");
 }
 
 export function getSuggestions(

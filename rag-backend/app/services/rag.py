@@ -22,6 +22,18 @@ from app.services.retriever import ResumeRetriever, RetrieverConfig
 
 logger = logging.getLogger(__name__)
 
+
+def _extract_answer_token(chunk: Any) -> Optional[str]:
+    """Pull the incremental answer text out of a LangChain retrieval-chain
+    stream chunk. Retrieval/context chunks have no ``answer`` key (or an empty
+    one) and are skipped by returning ``None``."""
+    if isinstance(chunk, dict):
+        answer = chunk.get("answer")
+        if isinstance(answer, str) and answer:
+            return answer
+    return None
+
+
 DEFAULT_SUGGESTION_FALLBACK = [
     "Can you tell me about your background?",
     "What kind of experience do you have?",
@@ -279,7 +291,38 @@ Please answer based ONLY on the resume context above. If the context doesn't con
                 exc_info=True,
             )
             raise
-    
+
+    async def stream_response(
+        self,
+        query: str,
+        conversation_history: Optional[List[Dict]] = None,
+        top_k: Optional[int] = None,
+        request_id: Optional[str] = None,
+    ):
+        """Yield answer tokens as the LLM generates them.
+
+        Mirrors ``generate_response`` but streams via ``astream``. No tenacity
+        retry here: a partially emitted stream cannot be safely replayed, so
+        transient-failure robustness comes from the frontend fallback to the
+        non-streaming ``/chat`` path.
+        """
+        req_id = request_id or "N/A"
+
+        if top_k is not None and top_k != self.config.rag_top_k:
+            self.retriever = self.retriever_instance.get_retriever(k=top_k)
+            self.retrieval_chain = self._build_retrieval_chain(self.retriever)
+
+        chat_history = self._convert_chat_history(conversation_history)
+        logger.debug("[%s] Streaming response (history=%d msgs)", req_id, len(chat_history))
+
+        async for chunk in self.retrieval_chain.astream({
+            "input": query,
+            "chat_history": chat_history if chat_history else [],
+        }):
+            token = _extract_answer_token(chunk)
+            if token:
+                yield token
+
     def generate_suggested_questions(
         self,
         last_user_message: Optional[str] = None,
@@ -436,6 +479,28 @@ def generate_rag_response(
         raise Exception("RAG pipeline initialization failed")
     
     return pipeline.generate_response(query, conversation_history, top_k)
+
+
+async def stream_rag_response(
+    query: str,
+    conversation_history: Optional[List[Dict]] = None,
+    top_k: Optional[int] = None,
+):
+    """Stream a RAG response token-by-token using the pipeline singleton.
+
+    Raises:
+        ValueError: If the RAG pipeline is not configured.
+        Exception: If initialization fails.
+    """
+    pipeline, error = get_rag_pipeline()
+
+    if error:
+        raise ValueError(error)
+    if not pipeline:
+        raise Exception("RAG pipeline initialization failed")
+
+    async for token in pipeline.stream_response(query, conversation_history, top_k):
+        yield token
 
 
 def generate_suggested_questions(
