@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { profile } from "../data/profile";
-import { chatWithPortfolio, getSuggestions } from "../services/chatApi";
+import { chatWithPortfolio, getSuggestions, streamChatWithPortfolio } from "../services/chatApi";
 
 const SESSION_STORAGE_KEY = "portfolio_chat_session_id";
 
-export type ChatStatus = "idle" | "thinking" | "done" | "error";
+export type ChatStatus = "idle" | "thinking" | "streaming" | "done" | "error";
 
 export interface ChatExchange {
   status: ChatStatus;
@@ -44,6 +44,7 @@ export function useChat() {
   const [exchange, setExchange] = useState<ChatExchange>(INITIAL_EXCHANGE);
   const [suggestions, setSuggestions] = useState<string[]>(SEED_SUGGESTIONS);
   const inFlight = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
@@ -67,28 +68,64 @@ export function useChat() {
       if (!message || !sessionId || inFlight.current) return;
 
       inFlight.current = true;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setExchange({ status: "thinking", query: message, reply: "", ms: 0, error: "" });
       const t0 = performance.now();
 
+      let firstToken = true;
+      let acc = "";
+
       try {
-        const data = await chatWithPortfolio({ sessionId, message });
-        const ms = Math.round(performance.now() - t0);
-        setExchange({
-          status: "done",
-          query: message,
-          reply: data.reply || "No response was generated.",
-          ms,
-          error: "",
+        await streamChatWithPortfolio({
+          sessionId,
+          message,
+          signal: controller.signal,
+          onToken: (text) => {
+            acc += text;
+            const ms = firstToken ? Math.round(performance.now() - t0) : undefined;
+            firstToken = false;
+            setExchange((prev) => ({
+              ...prev,
+              status: "streaming",
+              reply: acc,
+              ms: ms ?? prev.ms,
+            }));
+          },
         });
+
+        setExchange((prev) => ({ ...prev, status: "done", reply: acc }));
         void refreshSuggestions(message);
-      } catch (err) {
-        setExchange({
-          status: "error",
-          query: message,
-          reply: "",
-          ms: 0,
-          error: err instanceof Error ? err.message : "Unable to reach the assistant.",
-        });
+      } catch (streamErr) {
+        // A deliberate abort (new send / unmount) is not an error.
+        if (controller.signal.aborted) {
+          inFlight.current = false;
+          return;
+        }
+
+        // Streaming failed — fall back to the non-streaming endpoint.
+        try {
+          const data = await chatWithPortfolio({ sessionId, message });
+          const ms = Math.round(performance.now() - t0);
+          setExchange({
+            status: "done",
+            query: message,
+            reply: data.reply || "No response was generated.",
+            ms,
+            error: "",
+          });
+          void refreshSuggestions(message);
+        } catch (err) {
+          setExchange({
+            status: "error",
+            query: message,
+            reply: "",
+            ms: 0,
+            error: err instanceof Error ? err.message : "Unable to reach the assistant.",
+          });
+        }
       } finally {
         inFlight.current = false;
       }
