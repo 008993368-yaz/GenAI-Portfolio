@@ -238,6 +238,7 @@
   grid-template-rows: 1fr;
 }
 .aPanelInner {
+  min-height: 0; /* lets the 0fr grid track actually collapse the content */
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.3s var(--ease);
