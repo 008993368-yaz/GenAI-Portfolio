@@ -457,6 +457,7 @@ async def chat_stream(request: Request, payload: ChatRequest):
             async for envelope in stream_chat_reply(payload.sessionId, payload.message):
                 yield sse_encode(envelope)
         except Exception:
+            logger.exception("Streaming chat generation failed for /chat/stream")
             ERROR_COUNT.labels(endpoint="/chat/stream", error_type="chat_error").inc()
             yield sse_encode({"type": "error", "message": "Failed to generate chat response."})
 

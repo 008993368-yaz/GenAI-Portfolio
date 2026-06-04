@@ -1,5 +1,7 @@
 """Unit tests for chat orchestration flow."""
 
+import asyncio
+
 from app.services import chat_orchestrator
 
 
@@ -65,9 +67,6 @@ def test_generate_chat_reply_on_topic_uses_history_and_persists(monkeypatch):
         ("s2", "user", "Tell me about your experience"),
         ("s2", "assistant", "I have 4+ years of experience."),
     ]
-
-
-import asyncio
 
 
 def _drain(async_gen):
