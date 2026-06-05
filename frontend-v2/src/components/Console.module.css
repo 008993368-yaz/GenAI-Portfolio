@@ -95,6 +95,12 @@
   box-shadow: inset 0 -0.08em 0 var(--signal-dim);
 }
 
+/* The single rotating verb (typed + backspaced) in the hero headline. */
+.verbWord {
+  color: var(--signal);
+  white-space: nowrap;
+}
+
 .caret {
   display: inline-block;
   width: 0.5ch;

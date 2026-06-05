@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { profile } from "../data/profile";
 import { useChat } from "../hooks/useChat";
 import { useTypewriter } from "../hooks/useTypewriter";
+import { useTypewriterCycle } from "../hooks/useTypewriterCycle";
 import { useStreamingText } from "../hooks/useStreamingText";
 import styles from "./Console.module.css";
 
@@ -73,6 +74,12 @@ export default function Console() {
   };
 
   const verbs = profile.hero.headVerbs;
+  // Full sentence kept for screen readers (and the reduced-motion fallback),
+  // e.g. "retrieves, reasons, and responds."
+  const verbSentence = `${verbs.slice(0, -1).join(", ")}, and ${
+    verbs[verbs.length - 1]
+  }.`;
+  const { shown: cycledVerb, reduced: reducedVerbs } = useTypewriterCycle(verbs);
   const thinking = exchange.status === "thinking";
   const busy = thinking || exchange.status === "streaming";
 
@@ -122,16 +129,28 @@ export default function Console() {
             </span>
             <span className={styles.headLine}>
               <span className={styles.verbs}>
-                {verbs.map((v, i) => (
-                  <span key={v}>
-                    <span className={styles.verb}>{v}</span>
-                    {i < verbs.length - 1
-                      ? i === verbs.length - 2
-                        ? ", and "
-                        : ", "
-                      : "."}
-                  </span>
-                ))}
+                {reducedVerbs ? (
+                  // Reduced motion: keep the original static comma list.
+                  verbs.map((v, i) => (
+                    <span key={v}>
+                      <span className={styles.verb}>{v}</span>
+                      {i < verbs.length - 1
+                        ? i === verbs.length - 2
+                          ? ", and "
+                          : ", "
+                        : "."}
+                    </span>
+                  ))
+                ) : (
+                  <>
+                    <span className={styles.verbWord} aria-hidden="true">
+                      {cycledVerb}
+                    </span>
+                    {/* One clean copy of the full phrase for screen readers,
+                        since the animated word rewrites constantly. */}
+                    <span className={styles.srOnly}>{verbSentence}</span>
+                  </>
+                )}
                 <span className={styles.caret} aria-hidden="true" />
               </span>
             </span>
@@ -161,28 +180,28 @@ export default function Console() {
           </div>
 
           <div className={styles.readout} aria-live="polite">
-            {thinking && (
-              <span>
-                ↳ thinking<span className={styles.caret} aria-hidden="true" />
-              </span>
-            )}
             {/* key={exchange.query} is load-bearing: it changes per question so
-                React remounts this node and replays the answerIn animation. */}
-            {answering && (
+                React remounts this node and replays the answerIn animation. The
+                question shows from the moment the query is sent (while thinking)
+                and stays put as the reply streams in beneath it — same key, no
+                remount, so it reads as one continuous exchange. */}
+            {(thinking || answering) && (
               <span className={styles.answer} key={exchange.query}>
                 <span className={styles.qline}>› {exchange.query}</span>
                 <span className={styles.replyLine}>
                   {/* Visible typing is decorative; screen readers get one
                       clean copy of the full reply once it's complete. */}
                   <span aria-hidden="true">
-                    ↳ {typedReply}
-                    {!typedDone && <span className={styles.caret} />}
+                    ↳ {thinking ? "thinking" : typedReply}
+                    {(thinking || !typedDone) && (
+                      <span className={styles.caret} />
+                    )}
                   </span>
                   <span className={styles.srOnly}>
                     {exchange.status === "done" ? `↳ ${exchange.reply}` : ""}
                   </span>
                 </span>
-                {typedDone && (
+                {answering && typedDone && (
                   <span className={styles.meta}>
                     replied in <b>{exchange.ms}ms</b>
                   </span>
