@@ -157,11 +157,11 @@ export const profile = {
   projects: [
     {
       index: "01",
-      name: "AI-Powered Portfolio",
+      name: "Gen-AI Portfolio",
       tagline: "a portfolio you can query in natural language",
       description:
-        "Developed a full-stack interactive portfolio application with a React frontend featuring dynamic sections and an integrated AI-powered chatbot widget that enables natural conversation about professional background and qualifications. Built a production-ready RAG backend using FastAPI, LangChain, LLM APIs, and Pinecone vector database to enable semantic search over resume data with conversation memory, guardrails for off-topic queries, and real-time context retrieval from embedded PDF documents.",
-      tech: ["React", "FastAPI", "LangChain", "Pinecone"],
+        "A full-stack portfolio with a React frontend and an embedded AI chatbot for natural-language questions about my background. The FastAPI + LangChain backend runs semantic search over resume data in Pinecone, with conversation memory and guardrails for off-topic queries.",
+      tech: ["React", "FastAPI", "LangChain", "Pinecone", "OpenAI"],
       score: 0.97,
       vector: "0x1a4f",
     },
@@ -170,8 +170,8 @@ export const profile = {
       name: "ScholarBot",
       tagline: "an agent that searches the library for you",
       description:
-        "Developed a Streamlit-based Scholar AI Assistant chatbot using LangGraph and LLM-powered query parsing to extract parameters (search keywords, authors, resource types, date ranges) from user prompts, integrated with the CSUSB library API via a custom get_resource tool for retrieving academic articles, books, journals, and dissertations. Implemented stateful multi-turn interactions using InMemorySaver to maintain parameter context, enabling intelligent follow-up questions for missing details and improving user experience in resource retrieval.",
-      tech: ["LangGraph", "LangChain", "Streamlit"],
+        "A Streamlit assistant built on LangGraph that parses natural-language queries into search parameters and calls the CSUSB library API for articles, books, journals, and dissertations. Stateful multi-turn conversations retain context across a session via InMemorySaver.",
+      tech: ["LangGraph", "LangChain", "Streamlit", "Python"],
       score: 0.91,
       vector: "0x2b7c",
     },
