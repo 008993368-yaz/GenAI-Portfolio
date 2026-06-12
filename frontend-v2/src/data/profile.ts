@@ -157,11 +157,11 @@ export const profile = {
   projects: [
     {
       index: "01",
-      name: "Gen-AI Portfolio",
+      name: "AI-Powered Portfolio",
       tagline: "a portfolio you can query in natural language",
       description:
-        "A full-stack portfolio with a React frontend and an embedded AI chatbot for natural-language questions about my background. The FastAPI + LangChain backend runs semantic search over resume data in Pinecone, with conversation memory and guardrails for off-topic queries.",
-      tech: ["React", "FastAPI", "LangChain", "Pinecone", "OpenAI"],
+        "Developed a full-stack interactive portfolio application with a React frontend featuring dynamic sections and an integrated AI-powered chatbot widget that enables natural conversation about professional background and qualifications. Built a production-ready RAG backend using FastAPI, LangChain, LLM APIs, and Pinecone vector database to enable semantic search over resume data with conversation memory, guardrails for off-topic queries, and real-time context retrieval from embedded PDF documents.",
+      tech: ["React", "FastAPI", "LangChain", "Pinecone"],
       score: 0.97,
       vector: "0x1a4f",
     },
@@ -170,10 +170,30 @@ export const profile = {
       name: "ScholarBot",
       tagline: "an agent that searches the library for you",
       description:
-        "A Streamlit assistant built on LangGraph that parses natural-language queries into search parameters and calls the CSUSB library API for articles, books, journals, and dissertations. Stateful multi-turn conversations retain context across a session via InMemorySaver.",
-      tech: ["LangGraph", "LangChain", "Streamlit", "Python"],
+        "Developed a Streamlit-based Scholar AI Assistant chatbot using LangGraph and LLM-powered query parsing to extract parameters (search keywords, authors, resource types, date ranges) from user prompts, integrated with the CSUSB library API via a custom get_resource tool for retrieving academic articles, books, journals, and dissertations. Implemented stateful multi-turn interactions using InMemorySaver to maintain parameter context, enabling intelligent follow-up questions for missing details and improving user experience in resource retrieval.",
+      tech: ["LangGraph", "LangChain", "Streamlit"],
       score: 0.91,
       vector: "0x2b7c",
+    },
+    {
+      index: "03",
+      name: "Expect-The-Unexpected",
+      tagline: "pre-mortem failure analysis for AI coding agents",
+      description:
+        "Designed and built an open-standard Agent Skill for AI coding agents that performs scenario-driven failure-mode analysis on bounded surfaces (git diffs, endpoints, feature specs), using an 8-category failure taxonomy and pre-mortem reasoning to surface ranked risks and produce FMEA tables with concrete mitigations and test cases. Implemented Stage 0 scenario generation that extracts risk anchors from code changes and ranks candidate failure scenarios by blast radius × plausibility, plus an opt-in execution mode that writes regression tests, runs them via the project's test runner, and reports CONFIRMED / NOT REPRODUCED verdicts with a pre-deploy gate hook for Cursor and Claude Code.",
+      tech: ["AI Agent Skills", "FMEA", "Cursor / Claude Code"],
+      score: 0.88,
+      vector: "0x3c9e",
+    },
+    {
+      index: "04",
+      name: "Growth Scout",
+      tagline: "growth strategy skill for coding agents",
+      description:
+        "Designed a portable, agent-agnostic growth strategy skill package that guides coding agents through a 7-phase workflow—product mapping, codebase capability analysis, competitor gap scouting, and market signal research—to recommend high-impact features before implementation, with structured output templates for Product Scans, Opportunity Reports, Growth PRDs, and GitHub issue breakdowns. Built a multi-factor Growth Opportunity Score (GOS) model weighing demand strength, competitor gaps, strategic fit, revenue/retention impact, and codebase feasibility, with evidence-first labeling (known/inferred/unknown) to rank opportunities and produce actionable Build Now / Validate First recommendations across Cursor, Claude Code, Codex, GitHub Copilot, and Aider.",
+      tech: ["AI Agent Skills", "LLM Prompt Engineering", "Cursor / Claude Code"],
+      score: 0.85,
+      vector: "0x4d1a",
     },
   ] as Project[],
 
