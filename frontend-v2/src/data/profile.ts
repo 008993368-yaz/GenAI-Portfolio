@@ -175,6 +175,26 @@ export const profile = {
       score: 0.91,
       vector: "0x2b7c",
     },
+    {
+      index: "03",
+      name: "Expect The Unexpected",
+      tagline: "pre-mortem failure analysis for AI coding agents",
+      description:
+        "An Agent Skill for coding agents that runs pre-mortem failure analysis on bounded surfaces — git diffs, endpoints, and feature specs — using an 8-category taxonomy to rank risks and output FMEA tables with mitigations. An optional execution mode generates regression tests, runs them through the project test runner, and reports CONFIRMED / NOT REPRODUCED verdicts via a pre-deploy gate hook.",
+      tech: ["AI Agent Skills", "FMEA", "Cursor / Claude Code"],
+      score: 0.88,
+      vector: "0x3c9e",
+    },
+    {
+      index: "04",
+      name: "Growth Scout",
+      tagline: "growth strategy skill for coding agents",
+      description:
+        "A portable, agent-agnostic Skill that guides coding agents through a 7-phase growth workflow — product mapping, competitor scouting, and market research — before any implementation starts. A Growth Opportunity Score ranks candidates by demand, strategic fit, and codebase feasibility, outputting Build Now / Validate First recommendations with structured Product Scans and Growth PRDs.",
+      tech: ["AI Agent Skills", "LLM Prompt Engineering", "Cursor / Claude Code"],
+      score: 0.85,
+      vector: "0x4d1a",
+    },
   ] as Project[],
 
   education: [
