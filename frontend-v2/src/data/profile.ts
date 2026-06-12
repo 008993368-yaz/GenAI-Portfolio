@@ -177,10 +177,10 @@ export const profile = {
     },
     {
       index: "03",
-      name: "Expect-The-Unexpected",
+      name: "Expect The Unexpected",
       tagline: "pre-mortem failure analysis for AI coding agents",
       description:
-        "Designed and built an open-standard Agent Skill for AI coding agents that performs scenario-driven failure-mode analysis on bounded surfaces (git diffs, endpoints, feature specs), using an 8-category failure taxonomy and pre-mortem reasoning to surface ranked risks and produce FMEA tables with concrete mitigations and test cases. Implemented Stage 0 scenario generation that extracts risk anchors from code changes and ranks candidate failure scenarios by blast radius × plausibility, plus an opt-in execution mode that writes regression tests, runs them via the project's test runner, and reports CONFIRMED / NOT REPRODUCED verdicts with a pre-deploy gate hook for Cursor and Claude Code.",
+        "An Agent Skill for coding agents that runs pre-mortem failure analysis on bounded surfaces — git diffs, endpoints, and feature specs — using an 8-category taxonomy to rank risks and output FMEA tables with mitigations. An optional execution mode generates regression tests, runs them through the project test runner, and reports CONFIRMED / NOT REPRODUCED verdicts via a pre-deploy gate hook.",
       tech: ["AI Agent Skills", "FMEA", "Cursor / Claude Code"],
       score: 0.88,
       vector: "0x3c9e",
@@ -190,7 +190,7 @@ export const profile = {
       name: "Growth Scout",
       tagline: "growth strategy skill for coding agents",
       description:
-        "Designed a portable, agent-agnostic growth strategy skill package that guides coding agents through a 7-phase workflow—product mapping, codebase capability analysis, competitor gap scouting, and market signal research—to recommend high-impact features before implementation, with structured output templates for Product Scans, Opportunity Reports, Growth PRDs, and GitHub issue breakdowns. Built a multi-factor Growth Opportunity Score (GOS) model weighing demand strength, competitor gaps, strategic fit, revenue/retention impact, and codebase feasibility, with evidence-first labeling (known/inferred/unknown) to rank opportunities and produce actionable Build Now / Validate First recommendations across Cursor, Claude Code, Codex, GitHub Copilot, and Aider.",
+        "A portable, agent-agnostic Skill that guides coding agents through a 7-phase growth workflow — product mapping, competitor scouting, and market research — before any implementation starts. A Growth Opportunity Score ranks candidates by demand, strategic fit, and codebase feasibility, outputting Build Now / Validate First recommendations with structured Product Scans and Growth PRDs.",
       tech: ["AI Agent Skills", "LLM Prompt Engineering", "Cursor / Claude Code"],
       score: 0.85,
       vector: "0x4d1a",
